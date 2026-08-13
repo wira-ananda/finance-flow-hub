@@ -13,7 +13,7 @@ export function listBusinessUnits(): BusinessUnit[] {
 /** Mock session: mengembalikan pengguna default untuk role terpilih. */
 export function getUserForRole(role: UserRole): User {
   const id = DEFAULT_USER_BY_ROLE[role];
-  return MOCK_USERS.find((user) => user.id === id) ?? MOCK_USERS[0];
+  return MOCK_USERS.find((user) => user.id === id) ?? MOCK_USERS[0]!;
 }
 
 export function getBusinessUnit(id: string | null): BusinessUnit | undefined {
