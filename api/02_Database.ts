@@ -1,50 +1,59 @@
-function getDatabase() {
-  const spreadsheetId = getRequiredScriptProperty(
-    "SPREADSHEET_ID",
-  );
+interface SchemaValidationItem {
+  sheet: string;
+  valid: boolean;
+  reason?: string;
+  expectedHeaders?: string[];
+  actualHeaders?: string[];
+  missingHeaders: string[];
+  unexpectedHeaders: string[];
+  orderValid?: boolean;
+}
+
+interface SchemaValidationResult {
+  valid: boolean;
+  sheets: SchemaValidationItem[];
+}
+
+function getDatabase(): GoogleAppsScript.Spreadsheet.Spreadsheet {
+  const spreadsheetId = getRequiredScriptProperty("SPREADSHEET_ID");
 
   return SpreadsheetApp.openById(spreadsheetId);
 }
 
-function getDatabaseSheet(sheetName) {
+function getDatabaseSheet(
+  sheetName: string,
+): GoogleAppsScript.Spreadsheet.Sheet {
   const spreadsheet = getDatabase();
 
-  const sheet =
-    spreadsheet.getSheetByName(sheetName);
+  const sheet = spreadsheet.getSheetByName(sheetName);
 
   if (!sheet) {
-    throw new Error(
-      `Sheet "${sheetName}" tidak ditemukan.`,
-    );
+    throw new Error(`Sheet "${sheetName}" tidak ditemukan.`);
   }
 
   return sheet;
 }
 
-function getRequiredScriptProperty(key) {
-  const value =
-    PropertiesService.getScriptProperties().getProperty(
-      key,
-    );
+function getRequiredScriptProperty(key: string): string {
+  const value = PropertiesService.getScriptProperties().getProperty(key);
 
   if (!value) {
-    throw new Error(
-      `Script Property "${key}" belum dikonfigurasi.`,
-    );
+    throw new Error(`Script Property "${key}" belum dikonfigurasi.`);
   }
 
   return value;
 }
 
 /**
- * Jalankan SATU KALI dari Apps Script editor.
- *
- * Script harus dibuat dari:
- * Spreadsheet → Extensions → Apps Script.
+ * Menyimpan Spreadsheet ID ke Script Properties.
+ * Jalankan sekali dari Apps Script editor.
  */
-function setupProject() {
-  const spreadsheet =
-    SpreadsheetApp.getActiveSpreadsheet();
+function setupProject(): {
+  app: string;
+  spreadsheetId: string;
+  spreadsheetName: string;
+} {
+  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
 
   if (!spreadsheet) {
     throw new Error(
@@ -62,54 +71,55 @@ function setupProject() {
     spreadsheetName: spreadsheet.getName(),
   };
 
-  console.log(
-    JSON.stringify(result, null, 2),
-  );
+  console.log(JSON.stringify(result, null, 2));
 
   return result;
 }
 
-function validateDatabaseSchema() {
+function validateDatabaseSchema(): SchemaValidationResult {
   const spreadsheet = getDatabase();
 
-  const results = [];
+  const results: SchemaValidationItem[] = [];
 
-  Object.keys(DATABASE_SCHEMA).forEach(function (sheetName) {
+  const sheetNames = Object.keys(DATABASE_SCHEMA) as Array<
+    keyof typeof DATABASE_SCHEMA
+  >;
+
+  sheetNames.forEach((sheetName) => {
     const expectedHeaders = DATABASE_SCHEMA[sheetName];
 
-    const sheet =
-      spreadsheet.getSheetByName(sheetName);
+    const sheet = spreadsheet.getSheetByName(sheetName);
 
     if (!sheet) {
       results.push({
         sheet: sheetName,
         valid: false,
         reason: "Sheet tidak ditemukan.",
+        expectedHeaders,
+        actualHeaders: [],
         missingHeaders: expectedHeaders,
         unexpectedHeaders: [],
+        orderValid: false,
       });
 
       return;
     }
 
-    const actualHeaders =
-      getSheetHeaders(sheetName);
+    const actualHeaders = getSheetHeaders(sheetName);
 
-    const missingHeaders =
-      expectedHeaders.filter(function (header) {
-        return !actualHeaders.includes(header);
-      });
+    const missingHeaders = expectedHeaders.filter(
+      (header: string) => !actualHeaders.includes(header),
+    );
 
-    const unexpectedHeaders =
-      actualHeaders.filter(function (header) {
-        return !expectedHeaders.includes(header);
-      });
+    const unexpectedHeaders = actualHeaders.filter(
+      (header: string) => !expectedHeaders.includes(header),
+    );
 
     const orderValid =
       expectedHeaders.length === actualHeaders.length &&
-      expectedHeaders.every(function (header, index) {
-        return actualHeaders[index] === header;
-      });
+      expectedHeaders.every(
+        (header: string, index: number) => actualHeaders[index] === header,
+      );
 
     results.push({
       sheet: sheetName,
@@ -125,16 +135,12 @@ function validateDatabaseSchema() {
     });
   });
 
-  const result = {
-    valid: results.every(function (item) {
-      return item.valid;
-    }),
+  const result: SchemaValidationResult = {
+    valid: results.every((item: SchemaValidationItem) => item.valid),
     sheets: results,
   };
 
-  console.log(
-    JSON.stringify(result, null, 2),
-  );
+  console.log(JSON.stringify(result, null, 2));
 
   return result;
 }

@@ -1,23 +1,42 @@
-function successResponse(data, message) {
-  return jsonResponse({
-    success: true,
-    data: data === undefined ? null : data,
-    message: message || null,
-  });
+interface ApiResponse<T = unknown> {
+  success: boolean;
+  data: T | null;
+  message: string | null;
+  errorCode?: string;
+  details?: unknown;
 }
 
-function errorResponse(message, errorCode, details) {
-  return jsonResponse({
+function successResponse<T>(
+  data: T,
+  message?: string,
+): GoogleAppsScript.Content.TextOutput {
+  const payload: ApiResponse<T> = {
+    success: true,
+    data,
+    message: message ?? null,
+  };
+
+  return jsonResponse(payload);
+}
+
+function errorResponse(
+  message: string,
+  errorCode = "INTERNAL_ERROR",
+  details?: unknown,
+): GoogleAppsScript.Content.TextOutput {
+  const payload: ApiResponse<null> = {
     success: false,
     data: null,
-    message: message || "Terjadi kesalahan pada server.",
-    errorCode: errorCode || "INTERNAL_ERROR",
-    details: details || null,
-  });
+    message,
+    errorCode,
+    details: details ?? null,
+  };
+
+  return jsonResponse(payload);
 }
 
-function jsonResponse(payload) {
-  return ContentService.createTextOutput(
-    JSON.stringify(payload),
-  ).setMimeType(ContentService.MimeType.JSON);
+function jsonResponse(payload: unknown): GoogleAppsScript.Content.TextOutput {
+  return ContentService.createTextOutput(JSON.stringify(payload)).setMimeType(
+    ContentService.MimeType.JSON,
+  );
 }

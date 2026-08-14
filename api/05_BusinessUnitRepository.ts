@@ -1,24 +1,15 @@
-function listBusinessUnitRecords() {
-  return getAllRows(
-    APP_CONFIG.sheets.businessUnits,
-  );
+function listBusinessUnitRecords(): SheetRecord[] {
+  return getAllRows(APP_CONFIG.sheets.businessUnits);
 }
 
 function findBusinessUnitRecordById(
-  businessUnitId,
-) {
-  return findRowById(
-    APP_CONFIG.sheets.businessUnits,
-    businessUnitId,
-  );
+  businessUnitId: string,
+): SheetRecord | null {
+  return findRowById(APP_CONFIG.sheets.businessUnits, businessUnitId);
 }
 
-function listActiveBusinessUnitRecords() {
-  return listBusinessUnitRecords().filter(
-    function (unit) {
-      return normalizeBoolean(
-        unit.is_active,
-      );
-    },
+function listActiveBusinessUnitRecords(): SheetRecord[] {
+  return listBusinessUnitRecords().filter((unit) =>
+    normalizeBoolean(unit.is_active),
   );
 }

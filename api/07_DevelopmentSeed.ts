@@ -2,20 +2,14 @@ function seedDevelopmentMasterData() {
   seedBusinessUnits();
   seedUsers();
 
-  console.log(
-    "Development master data berhasil dibuat.",
-  );
+  console.log("Development master data berhasil dibuat.");
 }
 
 function seedBusinessUnits() {
-  const sheet = getDatabaseSheet(
-    APP_CONFIG.sheets.businessUnits,
-  );
+  const sheet = getDatabaseSheet(APP_CONFIG.sheets.businessUnits);
 
   if (sheet.getLastRow() > 1) {
-    console.log(
-      "business_units sudah memiliki data. Seed dilewati.",
-    );
+    console.log("business_units sudah memiliki data. Seed dilewati.");
     return;
   }
 
@@ -54,25 +48,14 @@ function seedBusinessUnits() {
     ],
   ];
 
-  sheet
-    .getRange(
-      2,
-      1,
-      rows.length,
-      rows[0].length,
-    )
-    .setValues(rows);
+  sheet.getRange(2, 1, rows.length, rows[0].length).setValues(rows);
 }
 
 function seedUsers() {
-  const sheet = getDatabaseSheet(
-    APP_CONFIG.sheets.users,
-  );
+  const sheet = getDatabaseSheet(APP_CONFIG.sheets.users);
 
   if (sheet.getLastRow() > 1) {
-    console.log(
-      "users sudah memiliki data. Seed dilewati.",
-    );
+    console.log("users sudah memiliki data. Seed dilewati.");
     return;
   }
 
@@ -125,12 +108,5 @@ function seedUsers() {
     ],
   ];
 
-  sheet
-    .getRange(
-      2,
-      1,
-      rows.length,
-      rows[0].length,
-    )
-    .setValues(rows);
+  sheet.getRange(2, 1, rows.length, rows[0].length).setValues(rows);
 }
