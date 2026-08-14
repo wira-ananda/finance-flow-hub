@@ -50,17 +50,6 @@ function processPaymentService(
       );
     }
 
-    /*
-     * Workflow saat ini hanya mendukung satu pembayaran
-     * dan satu status final PAID, jadi pembayaran harus penuh.
-     */
-    if (amount !== Number(request.amount)) {
-      throw createDomainError(
-        "Nominal pembayaran harus sama dengan nominal pengajuan.",
-        "PAYMENT_AMOUNT_MISMATCH",
-      );
-    }
-
     const paymentDate = String(payload.paymentDate ?? "").trim();
 
     if (!paymentDate) {
