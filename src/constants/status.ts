@@ -6,10 +6,7 @@ import type {
   UserRole,
 } from "@/types";
 
-export const STATUS_LABELS: Record<
-  RequestStatus,
-  string
-> = {
+export const STATUS_LABELS: Record<RequestStatus, string> = {
   DRAFT: "Draf",
   SUBMITTED: "Diajukan",
   UNDER_REVIEW: "Sedang Direview",
@@ -32,10 +29,7 @@ export const STATUS_ORDER: RequestStatus[] = [
 /**
  * Semantic status token yang bekerja pada light dan dark theme.
  */
-export const STATUS_TOKEN: Record<
-  RequestStatus,
-  string
-> = {
+export const STATUS_TOKEN: Record<RequestStatus, string> = {
   DRAFT: "status-draft",
   SUBMITTED: "status-submitted",
   UNDER_REVIEW: "status-review",
@@ -51,51 +45,30 @@ export const STATUS_TOKEN: Record<
  * UI menggunakan konfigurasi yang sama dengan service agar
  * alur status tidak tersebar di banyak component.
  */
-export const REQUEST_STATUS_TRANSITIONS: Record<
-  RequestStatus,
-  readonly RequestStatus[]
-> = {
-  DRAFT: [
-    "SUBMITTED",
-  ],
+export const REQUEST_STATUS_TRANSITIONS: Record<RequestStatus, readonly RequestStatus[]> = {
+  DRAFT: ["SUBMITTED"],
 
-  SUBMITTED: [
-    "UNDER_REVIEW",
-  ],
+  SUBMITTED: ["UNDER_REVIEW"],
 
-  UNDER_REVIEW: [
-    "REVISION_REQUIRED",
-    "REJECTED",
-    "APPROVED",
-  ],
+  UNDER_REVIEW: ["REVISION_REQUIRED", "REJECTED", "APPROVED"],
 
-  REVISION_REQUIRED: [
-    "SUBMITTED",
-  ],
+  REVISION_REQUIRED: ["SUBMITTED"],
 
   REJECTED: [],
 
-  APPROVED: [
-    "PAID",
-  ],
+  APPROVED: ["PAID"],
 
   PAID: [],
 };
 
-export const ROLE_LABELS: Record<
-  UserRole,
-  string
-> = {
+export const ROLE_LABELS: Record<UserRole, string> = {
   UNIT_USER: "Unit Bisnis",
   FINANCE_REVIEWER: "Finance Reviewer",
   FINANCE_PAYMENT: "Finance Payment",
   ADMIN: "Administrator",
 };
 
-export const CATEGORY_LABELS: Record<
-  RequestCategory,
-  string
-> = {
+export const CATEGORY_LABELS: Record<RequestCategory, string> = {
   OPERASIONAL: "Operasional",
   PENGADAAN: "Pengadaan",
   PERJALANAN_DINAS: "Perjalanan Dinas",
@@ -103,19 +76,13 @@ export const CATEGORY_LABELS: Record<
   PEMASARAN: "Pemasaran",
 };
 
-export const DOCUMENT_TYPE_LABELS: Record<
-  RequestDocumentType,
-  string
-> = {
+export const DOCUMENT_TYPE_LABELS: Record<RequestDocumentType, string> = {
   LAMPIRAN: "Dokumen Pendukung",
   SURAT_PERSETUJUAN: "Surat Persetujuan",
   BUKTI_TRANSFER: "Bukti Transfer",
 };
 
-export const ACTIVITY_LABELS: Record<
-  ActivityAction,
-  string
-> = {
+export const ACTIVITY_LABELS: Record<ActivityAction, string> = {
   CREATED: "Pengajuan dibuat",
   SUBMITTED: "Pengajuan diajukan",
   REVIEW_STARTED: "Review dimulai",
@@ -123,14 +90,11 @@ export const ACTIVITY_LABELS: Record<
   RESUBMITTED: "Pengajuan diajukan ulang",
   REJECTED: "Pengajuan ditolak",
   APPROVED: "Pengajuan disetujui",
-  APPROVAL_LETTER_GENERATED:
-    "Surat persetujuan dibuat",
+  APPROVAL_LETTER_GENERATED: "Surat persetujuan dibuat",
   PAID: "Pembayaran selesai",
   COMMENT: "Catatan ditambahkan",
 };
 
-export const APP_NAME =
-  "Finance Request";
+export const APP_NAME = "Finance Request";
 
-export const APP_NAME_FULL =
-  "Finance Request Management System";
+export const APP_NAME_FULL = "Finance Request Management System";

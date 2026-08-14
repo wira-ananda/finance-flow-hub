@@ -1,22 +1,5 @@
-import {
-  Link,
-  useRouterState,
-} from "@tanstack/react-router";
-import {
-  Bell,
-  LogOut,
-  Menu,
-} from "lucide-react";
-
-import { NAV_ITEMS } from "@/constants/navigation";
-import {
-  APP_NAME_FULL,
-  ROLE_LABELS,
-} from "@/constants/status";
-import { useSession } from "@/providers/session-provider";
-import { getBusinessUnit } from "@/services/user.service";
-import { RoleSwitcher } from "./RoleSwitcher";
-import { ThemeSwitcher } from "./ThemeSwitcher";
+import { Link, useRouterState } from "@tanstack/react-router";
+import { Bell, LogOut, Menu } from "lucide-react";
 
 import {
   DropdownMenu,
@@ -26,104 +9,60 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { NAV_ITEMS } from "@/constants/navigation";
+import { APP_NAME_FULL, ROLE_LABELS } from "@/constants/status";
+import { useBusinessUnits } from "@/hooks/use-business-units";
+import { getBreadcrumbItems } from "@/lib/navigation";
+import { navItemsForRole } from "@/lib/permissions";
+import { useSession } from "@/providers/session-provider";
+import { RoleSwitcher } from "./RoleSwitcher";
+import { ThemeSwitcher } from "./ThemeSwitcher";
 
-function useBreadcrumb() {
+export function AppHeader({ onOpenMobileNav }: { onOpenMobileNav: () => void }) {
+  const { user, role, logout } = useSession();
+
+  const businessUnits = useBusinessUnits();
+
   const pathname = useRouterState({
-    select: (state) =>
-      state.location.pathname,
+    select: (state) => state.location.pathname,
   });
-
-  const match = NAV_ITEMS.find(
-    (item) =>
-      item.to !== "/" &&
-      (pathname === item.to ||
-        pathname.startsWith(`${item.to}/`)),
-  );
-
-  if (pathname === "/") {
-    return [
-      {
-        label: "Dashboard",
-        to: "/",
-      },
-    ];
-  }
-
-  return [
-    {
-      label: "Dashboard",
-      to: "/",
-    },
-    {
-      label: match?.label ?? "Detail",
-      to: pathname,
-    },
-  ];
-}
-
-export function AppHeader({
-  onOpenMobileNav,
-}: {
-  onOpenMobileNav: () => void;
-}) {
-  const {
-    user,
-    role,
-    logout,
-  } = useSession();
-
-  const crumbs = useBreadcrumb();
 
   if (!user || !role) {
     return null;
   }
 
-  const unit = getBusinessUnit(
-    user.businessUnitId,
-  );
+  const navigationItems = navItemsForRole(role, NAV_ITEMS);
+
+  const crumbs = getBreadcrumbItems(pathname, role, navigationItems);
+
+  const unit = businessUnits.find((item) => item.id === user.businessUnitId);
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border bg-background/95 px-4 backdrop-blur">
+    <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border bg-background/95 px-4 backdrop-blur sm:px-6">
       <button
         type="button"
         onClick={onOpenMobileNav}
         className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground lg:hidden"
         aria-label="Buka navigasi"
       >
-        <Menu
-          className="size-5"
-          aria-hidden
-        />
+        <Menu className="size-5" aria-hidden />
       </button>
 
-      <nav
-        aria-label="Breadcrumb"
-        className="min-w-0 flex-1"
-      >
+      <nav aria-label="Breadcrumb" className="min-w-0 flex-1">
         <ol className="flex items-center gap-1.5 text-sm">
           {crumbs.map((crumb, index) => (
-            <li
-              key={crumb.to}
-              className="flex min-w-0 items-center gap-1.5"
-            >
-              {index > 0 ? (
-                <span className="text-muted-foreground">
-                  /
-                </span>
-              ) : null}
+            <li key={`${crumb.label}-${index}`} className="flex min-w-0 items-center gap-1.5">
+              {index > 0 ? <span className="text-muted-foreground">/</span> : null}
 
-              {index ===
-              crumbs.length - 1 ? (
-                <span className="truncate font-medium text-foreground">
-                  {crumb.label}
-                </span>
-              ) : (
+              {crumb.to ? (
                 <Link
                   to={crumb.to}
-                  className="text-muted-foreground hover:text-foreground"
+                  className="truncate text-muted-foreground transition-colors hover:text-foreground"
                 >
                   {crumb.label}
                 </Link>
+              ) : (
+                <span className="truncate font-medium text-foreground">{crumb.label}</span>
               )}
             </li>
           ))}
@@ -136,18 +75,12 @@ export function AppHeader({
 
       <button
         type="button"
-        className="relative rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-        aria-label="Notifikasi"
+        disabled
+        title="Notifikasi akan aktif setelah integrasi backend."
+        className="rounded-md p-1.5 text-muted-foreground opacity-60"
+        aria-label="Notifikasi belum tersedia"
       >
-        <Bell
-          className="size-4.5"
-          aria-hidden
-        />
-
-        <span
-          className="absolute right-1 top-1 size-1.5 rounded-full bg-primary"
-          aria-hidden
-        />
+        <Bell className="size-4.5" aria-hidden />
       </button>
 
       <DropdownMenu>
@@ -157,9 +90,7 @@ export function AppHeader({
           </span>
 
           <span className="hidden min-w-0 sm:block">
-            <span className="block truncate text-xs font-medium text-foreground">
-              {user.name}
-            </span>
+            <span className="block truncate text-xs font-medium text-foreground">{user.name}</span>
 
             <span className="block truncate text-[11px] text-muted-foreground">
               {ROLE_LABELS[role]}
@@ -167,21 +98,15 @@ export function AppHeader({
           </span>
         </DropdownMenuTrigger>
 
-        <DropdownMenuContent
-          align="end"
-          className="w-64"
-        >
+        <DropdownMenuContent align="end" className="w-64">
           <DropdownMenuLabel className="space-y-0.5">
-            <p className="text-sm font-medium text-foreground">
-              {user.name}
-            </p>
+            <p className="text-sm font-medium text-foreground">{user.name}</p>
 
-            <p className="text-xs font-normal text-muted-foreground">
-              {user.email}
-            </p>
+            <p className="text-xs font-normal text-muted-foreground">{user.email}</p>
 
             <p className="text-xs font-normal text-muted-foreground">
               {user.jobTitle}
+
               {unit ? ` · ${unit.name}` : ""}
             </p>
           </DropdownMenuLabel>
@@ -189,49 +114,48 @@ export function AppHeader({
           <DropdownMenuSeparator />
 
           <div className="px-2 py-2">
-            <p className="pb-1.5 text-xs font-medium text-muted-foreground">
-              Tema Tampilan
-            </p>
+            <p className="pb-1.5 text-xs font-medium text-muted-foreground">Tema Tampilan</p>
 
             <ThemeSwitcher variant="full" />
           </div>
 
-          <DropdownMenuSeparator />
+          {import.meta.env.DEV ? (
+            <>
+              <DropdownMenuSeparator />
 
-          <div className="px-2 py-2 md:hidden">
-            <p className="pb-1.5 text-xs font-medium text-muted-foreground">
-              Role Pengembangan
-            </p>
+              <div className="px-2 py-2 md:hidden">
+                <p className="pb-1.5 text-xs font-medium text-muted-foreground">
+                  Role Pengembangan
+                </p>
 
-            <RoleSwitcher variant="full" />
-          </div>
+                <RoleSwitcher variant="full" />
+              </div>
+            </>
+          ) : null}
 
-          <DropdownMenuSeparator className="md:hidden" />
+          {role === "ADMIN" ? (
+            <>
+              <DropdownMenuSeparator />
 
-          <DropdownMenuItem asChild>
-            <Link to="/pengaturan">
-              Pengaturan Sistem
-            </Link>
-          </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link to="/pengaturan">Pengaturan Sistem</Link>
+              </DropdownMenuItem>
+            </>
+          ) : null}
 
           <DropdownMenuSeparator />
 
           <DropdownMenuItem
-            onSelect={logout}
+            onSelect={() => logout()}
             className="text-destructive focus:text-destructive"
           >
-            <LogOut
-              className="mr-2 size-4"
-              aria-hidden
-            />
+            <LogOut className="mr-2 size-4" aria-hidden />
             Keluar
           </DropdownMenuItem>
 
           <DropdownMenuSeparator />
 
-          <p className="px-2 py-1.5 text-[11px] text-muted-foreground">
-            {APP_NAME_FULL}
-          </p>
+          <p className="px-2 py-1.5 text-[11px] text-muted-foreground">{APP_NAME_FULL}</p>
         </DropdownMenuContent>
       </DropdownMenu>
     </header>

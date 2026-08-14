@@ -16,6 +16,7 @@ import { Route as PengajuanRouteImport } from './routes/pengajuan'
 import { Route as PengaturanRouteImport } from './routes/pengaturan'
 import { Route as PenggunaRouteImport } from './routes/pengguna'
 import { Route as ReviewRouteImport } from './routes/review'
+import { Route as RiwayatReviewRouteImport } from './routes/riwayat-review'
 import { Route as UnitBisnisRouteImport } from './routes/unit-bisnis'
 import { Route as PengajuanIndexRouteImport } from './routes/pengajuan.index'
 import { Route as PengajuanIdRouteImport } from './routes/pengajuan.$id'
@@ -56,6 +57,11 @@ const ReviewRoute = ReviewRouteImport.update({
   path: '/review',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RiwayatReviewRoute = RiwayatReviewRouteImport.update({
+  id: '/riwayat-review',
+  path: '/riwayat-review',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const UnitBisnisRoute = UnitBisnisRouteImport.update({
   id: '/unit-bisnis',
   path: '/unit-bisnis',
@@ -85,6 +91,7 @@ export interface FileRoutesByFullPath {
   '/pengaturan': typeof PengaturanRoute
   '/pengguna': typeof PenggunaRoute
   '/review': typeof ReviewRoute
+  '/riwayat-review': typeof RiwayatReviewRoute
   '/unit-bisnis': typeof UnitBisnisRoute
   '/pengajuan/$id': typeof PengajuanIdRoute
   '/pengajuan/baru': typeof PengajuanBaruRoute
@@ -97,6 +104,7 @@ export interface FileRoutesByTo {
   '/pengaturan': typeof PengaturanRoute
   '/pengguna': typeof PenggunaRoute
   '/review': typeof ReviewRoute
+  '/riwayat-review': typeof RiwayatReviewRoute
   '/unit-bisnis': typeof UnitBisnisRoute
   '/pengajuan/$id': typeof PengajuanIdRoute
   '/pengajuan/baru': typeof PengajuanBaruRoute
@@ -111,6 +119,7 @@ export interface FileRoutesById {
   '/pengaturan': typeof PengaturanRoute
   '/pengguna': typeof PenggunaRoute
   '/review': typeof ReviewRoute
+  '/riwayat-review': typeof RiwayatReviewRoute
   '/unit-bisnis': typeof UnitBisnisRoute
   '/pengajuan/$id': typeof PengajuanIdRoute
   '/pengajuan/baru': typeof PengajuanBaruRoute
@@ -126,6 +135,7 @@ export interface FileRouteTypes {
     | '/pengaturan'
     | '/pengguna'
     | '/review'
+    | '/riwayat-review'
     | '/unit-bisnis'
     | '/pengajuan/$id'
     | '/pengajuan/baru'
@@ -138,6 +148,7 @@ export interface FileRouteTypes {
     | '/pengaturan'
     | '/pengguna'
     | '/review'
+    | '/riwayat-review'
     | '/unit-bisnis'
     | '/pengajuan/$id'
     | '/pengajuan/baru'
@@ -151,6 +162,7 @@ export interface FileRouteTypes {
     | '/pengaturan'
     | '/pengguna'
     | '/review'
+    | '/riwayat-review'
     | '/unit-bisnis'
     | '/pengajuan/$id'
     | '/pengajuan/baru'
@@ -165,6 +177,7 @@ export interface RootRouteChildren {
   PengaturanRoute: typeof PengaturanRoute
   PenggunaRoute: typeof PenggunaRoute
   ReviewRoute: typeof ReviewRoute
+  RiwayatReviewRoute: typeof RiwayatReviewRoute
   UnitBisnisRoute: typeof UnitBisnisRoute
 }
 
@@ -217,6 +230,13 @@ declare module '@tanstack/react-router' {
       path: '/review'
       fullPath: '/review'
       preLoaderRoute: typeof ReviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/riwayat-review': {
+      id: '/riwayat-review'
+      path: '/riwayat-review'
+      fullPath: '/riwayat-review'
+      preLoaderRoute: typeof RiwayatReviewRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/unit-bisnis': {
@@ -274,6 +294,7 @@ const rootRouteChildren: RootRouteChildren = {
   PengaturanRoute: PengaturanRoute,
   PenggunaRoute: PenggunaRoute,
   ReviewRoute: ReviewRoute,
+  RiwayatReviewRoute: RiwayatReviewRoute,
   UnitBisnisRoute: UnitBisnisRoute,
 }
 export const routeTree = rootRouteImport

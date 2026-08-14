@@ -8,15 +8,16 @@ type RequestStoreListener = () => void;
 const listeners = new Set<RequestStoreListener>();
 
 /**
- * Membuat salinan seed request agar mock data asli tidak termutasi.
+ * Membuat salinan request dan menormalisasi struktur data lama.
  */
 function cloneRequests(requests: FinanceRequest[]): FinanceRequest[] {
   return requests.map((request) => ({
     ...request,
-    documents: request.documents.map((document) => ({
+    payment: request.payment ? { ...request.payment } : null,
+    documents: (request.documents ?? []).map((document) => ({
       ...document,
     })),
-    activities: request.activities.map((activity) => ({
+    activities: (request.activities ?? []).map((activity) => ({
       ...activity,
     })),
   }));
@@ -26,9 +27,6 @@ const serverSnapshot = cloneRequests(MOCK_REQUESTS);
 
 let browserSnapshot: FinanceRequest[] | null = null;
 
-/**
- * Membaca snapshot mock request dari localStorage.
- */
 function readStoredRequests(): FinanceRequest[] {
   if (typeof window === "undefined") {
     return serverSnapshot;
@@ -46,69 +44,47 @@ function readStoredRequests(): FinanceRequest[] {
   }
 
   try {
-    const parsed = JSON.parse(stored);
+    const parsed: unknown = JSON.parse(stored);
 
     if (!Array.isArray(parsed)) {
       throw new Error("Format mock request tidak valid.");
     }
 
-    browserSnapshot = parsed as FinanceRequest[];
+    browserSnapshot = cloneRequests(parsed as FinanceRequest[]);
+
     return browserSnapshot;
   } catch {
     browserSnapshot = cloneRequests(MOCK_REQUESTS);
 
-    window.localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify(browserSnapshot),
-    );
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(browserSnapshot));
 
     return browserSnapshot;
   }
 }
 
-/**
- * Memberi tahu subscriber bahwa mock request telah berubah.
- */
-function emitChange() {
+function emitChange(): void {
   listeners.forEach((listener) => listener());
 }
 
-/**
- * Menyimpan seluruh snapshot mock request.
- */
-function persistRequests(requests: FinanceRequest[]) {
+function persistRequests(requests: FinanceRequest[]): void {
   browserSnapshot = requests;
 
   if (typeof window !== "undefined") {
-    window.localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify(requests),
-    );
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(requests));
   }
 
   emitChange();
 }
 
-/**
- * Snapshot untuk client.
- */
 export function getMockRequestSnapshot(): FinanceRequest[] {
   return readStoredRequests();
 }
 
-/**
- * Snapshot stabil untuk SSR.
- */
 export function getMockRequestServerSnapshot(): FinanceRequest[] {
   return serverSnapshot;
 }
 
-/**
- * Subscribe perubahan mock request.
- */
-export function subscribeMockRequests(
-  listener: RequestStoreListener,
-): () => void {
+export function subscribeMockRequests(listener: RequestStoreListener): () => void {
   listeners.add(listener);
 
   return () => {
@@ -116,34 +92,19 @@ export function subscribeMockRequests(
   };
 }
 
-/**
- * Menambahkan pengajuan baru ke mock repository.
- */
-export function insertMockRequest(
-  request: FinanceRequest,
-): FinanceRequest {
-  const current = getMockRequestSnapshot();
-
-  persistRequests([
-    ...current,
-    request,
-  ]);
+export function insertMockRequest(request: FinanceRequest): FinanceRequest {
+  persistRequests([...getMockRequestSnapshot(), request]);
 
   return request;
 }
 
-/**
- * Memperbarui satu mock request secara immutable.
- */
 export function updateMockRequest(
   requestId: string,
   updater: (request: FinanceRequest) => FinanceRequest,
 ): FinanceRequest | undefined {
   const current = getMockRequestSnapshot();
 
-  const existing = current.find(
-    (request) => request.id === requestId,
-  );
+  const existing = current.find((request) => request.id === requestId);
 
   if (!existing) {
     return undefined;
@@ -151,22 +112,11 @@ export function updateMockRequest(
 
   const updated = updater(existing);
 
-  persistRequests(
-    current.map((request) =>
-      request.id === requestId
-        ? updated
-        : request,
-    ),
-  );
+  persistRequests(current.map((request) => (request.id === requestId ? updated : request)));
 
   return updated;
 }
 
-/**
- * Mengembalikan mock request ke seed awal dari Lovable.
- */
-export function resetMockRequests() {
-  persistRequests(
-    cloneRequests(MOCK_REQUESTS),
-  );
+export function resetMockRequests(): void {
+  persistRequests(cloneRequests(MOCK_REQUESTS));
 }

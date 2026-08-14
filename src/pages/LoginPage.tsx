@@ -1,21 +1,9 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import {
-  Building2,
-  FlaskConical,
-  LogIn,
-  ShieldCheck,
-  Wallet,
-} from "lucide-react";
+import { Building2, FlaskConical, LogIn, ShieldCheck, Wallet } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -24,16 +12,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ThemeSwitcher } from "@/components/layout/ThemeSwitcher";
-import {
-  APP_NAME,
-  APP_NAME_FULL,
-  ROLE_LABELS,
-} from "@/constants/status";
+import { APP_NAME, APP_NAME_FULL, ROLE_LABELS } from "@/constants/status";
 import { useSession } from "@/providers/session-provider";
-import {
-  getBusinessUnit,
-  listActiveUsers,
-} from "@/services/user.service";
+import { getBusinessUnit, listActiveUsers } from "@/services/user.service";
 
 interface LoginPageProps {
   redirectTo?: string;
@@ -45,17 +26,11 @@ export function LoginPage({ redirectTo }: LoginPageProps) {
 
   const users = useMemo(() => listActiveUsers(), []);
 
-  const [selectedUserId, setSelectedUserId] = useState(
-    () => users[0]?.id ?? "",
-  );
+  const [selectedUserId, setSelectedUserId] = useState(() => users[0]?.id ?? "");
 
-  const selectedUser = users.find(
-    (user) => user.id === selectedUserId,
-  );
+  const selectedUser = users.find((user) => user.id === selectedUserId);
 
-  const selectedUnit = getBusinessUnit(
-    selectedUser?.businessUnitId ?? null,
-  );
+  const selectedUnit = getBusinessUnit(selectedUser?.businessUnitId ?? null);
 
   const handleLogin = () => {
     if (!selectedUser) return;
@@ -87,12 +62,8 @@ export function LoginPage({ redirectTo }: LoginPageProps) {
           </span>
 
           <div>
-            <p className="text-sm font-semibold text-foreground">
-              {APP_NAME}
-            </p>
-            <p className="text-[11px] text-muted-foreground">
-              Finance Management
-            </p>
+            <p className="text-sm font-semibold text-foreground">{APP_NAME}</p>
+            <p className="text-[11px] text-muted-foreground">Finance Management</p>
           </div>
         </div>
 
@@ -111,33 +82,22 @@ export function LoginPage({ redirectTo }: LoginPageProps) {
           </h1>
 
           <p className="mt-5 max-w-lg text-base leading-7 text-muted-foreground">
-            Pengajuan unit bisnis, review Finance, persetujuan,
-            pembayaran, surat persetujuan, dan bukti transfer
-            berada dalam satu sistem.
+            Pengajuan unit bisnis, review Finance, persetujuan, pembayaran, surat persetujuan, dan
+            bukti transfer berada dalam satu sistem.
           </p>
 
           <div className="mt-10 grid grid-cols-2 gap-4">
             <div className="rounded-xl border border-border bg-card/70 p-4">
-              <Building2
-                className="mb-3 size-5 text-primary"
-                aria-hidden
-              />
-              <p className="text-sm font-medium text-foreground">
-                Lintas Unit Bisnis
-              </p>
+              <Building2 className="mb-3 size-5 text-primary" aria-hidden />
+              <p className="text-sm font-medium text-foreground">Lintas Unit Bisnis</p>
               <p className="mt-1 text-xs leading-5 text-muted-foreground">
                 Setiap unit dapat mengelola dan memantau pengajuannya.
               </p>
             </div>
 
             <div className="rounded-xl border border-border bg-card/70 p-4">
-              <ShieldCheck
-                className="mb-3 size-5 text-primary"
-                aria-hidden
-              />
-              <p className="text-sm font-medium text-foreground">
-                Akses Berbasis Role
-              </p>
+              <ShieldCheck className="mb-3 size-5 text-primary" aria-hidden />
+              <p className="text-sm font-medium text-foreground">Akses Berbasis Role</p>
               <p className="mt-1 text-xs leading-5 text-muted-foreground">
                 Hak akses menyesuaikan tanggung jawab setiap pengguna.
               </p>
@@ -152,9 +112,7 @@ export function LoginPage({ redirectTo }: LoginPageProps) {
             </div>
 
             <div>
-              <CardTitle className="text-xl">
-                Masuk ke Sistem
-              </CardTitle>
+              <CardTitle className="text-xl">Masuk ke Sistem</CardTitle>
 
               <CardDescription className="mt-1.5">
                 Gunakan akun pengujian untuk melanjutkan development.
@@ -165,51 +123,34 @@ export function LoginPage({ redirectTo }: LoginPageProps) {
           <CardContent className="space-y-5">
             <div className="rounded-lg border border-status-revision/25 bg-status-revision/8 p-3">
               <div className="flex gap-2.5">
-                <FlaskConical
-                  className="mt-0.5 size-4 shrink-0 text-status-revision"
-                  aria-hidden
-                />
+                <FlaskConical className="mt-0.5 size-4 shrink-0 text-status-revision" aria-hidden />
 
                 <div>
-                  <p className="text-xs font-medium text-foreground">
-                    Mode Pengembangan
-                  </p>
+                  <p className="text-xs font-medium text-foreground">Mode Pengembangan</p>
 
                   <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                    Authentication Google belum aktif. Pilih salah satu
-                    akun mock untuk menguji role aplikasi.
+                    Authentication Google belum aktif. Pilih salah satu akun mock untuk menguji role
+                    aplikasi.
                   </p>
                 </div>
               </div>
             </div>
 
             <div className="space-y-2">
-              <label
-                htmlFor="mock-user"
-                className="text-sm font-medium text-foreground"
-              >
+              <label htmlFor="mock-user" className="text-sm font-medium text-foreground">
                 Akun Pengujian
               </label>
 
-              <Select
-                value={selectedUserId}
-                onValueChange={setSelectedUserId}
-              >
+              <Select value={selectedUserId} onValueChange={setSelectedUserId}>
                 <SelectTrigger id="mock-user" className="h-11 w-full">
                   <SelectValue placeholder="Pilih pengguna" />
                 </SelectTrigger>
 
                 <SelectContent>
                   {users.map((user) => (
-                    <SelectItem
-                      key={user.id}
-                      value={user.id}
-                      className="py-2"
-                    >
+                    <SelectItem key={user.id} value={user.id} className="py-2">
                       <span className="flex flex-col">
-                        <span className="text-sm font-medium">
-                          {user.name}
-                        </span>
+                        <span className="text-sm font-medium">{user.name}</span>
 
                         <span className="text-xs text-muted-foreground">
                           {ROLE_LABELS[user.role]}
@@ -240,9 +181,7 @@ export function LoginPage({ redirectTo }: LoginPageProps) {
                     <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
                       <span>{ROLE_LABELS[selectedUser.role]}</span>
 
-                      {selectedUnit ? (
-                        <span>• {selectedUnit.name}</span>
-                      ) : null}
+                      {selectedUnit ? <span>• {selectedUnit.name}</span> : null}
                     </div>
                   </div>
                 </div>
@@ -261,8 +200,8 @@ export function LoginPage({ redirectTo }: LoginPageProps) {
 
             <div className="border-t border-border pt-4">
               <p className="text-center text-[11px] leading-5 text-muted-foreground">
-                Google Sign-In akan menggantikan mock login ketika
-                integrasi production authentication dilakukan.
+                Google Sign-In akan menggantikan mock login ketika integrasi production
+                authentication dilakukan.
               </p>
             </div>
           </CardContent>

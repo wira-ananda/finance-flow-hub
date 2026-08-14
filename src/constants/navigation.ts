@@ -1,6 +1,10 @@
 import type { NavItem } from "@/types";
 
 export const NAV_ITEMS: NavItem[] = [
+  // =========================
+  // GENERAL
+  // =========================
+
   {
     label: "Dashboard",
     to: "/",
@@ -8,34 +12,63 @@ export const NAV_ITEMS: NavItem[] = [
     roles: ["UNIT_USER", "FINANCE_REVIEWER", "FINANCE_PAYMENT", "ADMIN"],
     group: "Utama",
   },
+
+  // =========================
+  // UNIT USER
+  // =========================
+
   {
     label: "Pengajuan Saya",
     to: "/pengajuan",
     icon: "FileText",
-    roles: ["UNIT_USER", "ADMIN"],
-    group: "Utama",
-  },
-  {
-    label: "Buat Pengajuan",
-    to: "/pengajuan/baru",
-    icon: "FilePlus2",
     roles: ["UNIT_USER"],
     group: "Utama",
   },
+
+  // =========================
+  // FINANCE REVIEWER
+  // =========================
+
   {
-    label: "Menunggu Review",
+    label: "Antrean Review",
     to: "/review",
     icon: "ClipboardCheck",
-    roles: ["FINANCE_REVIEWER", "ADMIN"],
+    roles: ["FINANCE_REVIEWER"],
     group: "Finance",
   },
+
+  {
+    label: "Riwayat Review",
+    to: "/riwayat-review",
+    icon: "History",
+    roles: ["FINANCE_REVIEWER"],
+    group: "Finance",
+  },
+
+  // =========================
+  // FINANCE PAYMENT
+  // =========================
+
   {
     label: "Proses Pembayaran",
     to: "/pembayaran",
     icon: "Banknote",
-    roles: ["FINANCE_PAYMENT", "ADMIN"],
+    roles: ["FINANCE_PAYMENT"],
     group: "Finance",
   },
+
+  // =========================
+  // ADMIN
+  // =========================
+
+  {
+    label: "Seluruh Pengajuan",
+    to: "/pengajuan",
+    icon: "Files",
+    roles: ["ADMIN"],
+    group: "Utama",
+  },
+
   {
     label: "Kelola Pengguna",
     to: "/pengguna",
@@ -43,6 +76,7 @@ export const NAV_ITEMS: NavItem[] = [
     roles: ["ADMIN"],
     group: "Administrasi",
   },
+
   {
     label: "Unit Bisnis",
     to: "/unit-bisnis",
@@ -50,11 +84,12 @@ export const NAV_ITEMS: NavItem[] = [
     roles: ["ADMIN"],
     group: "Administrasi",
   },
+
   {
     label: "Pengaturan Sistem",
     to: "/pengaturan",
     icon: "Settings",
-    roles: ["UNIT_USER", "FINANCE_REVIEWER", "FINANCE_PAYMENT", "ADMIN"],
+    roles: ["ADMIN"],
     group: "Administrasi",
   },
 ];

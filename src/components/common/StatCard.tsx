@@ -25,9 +25,7 @@ export function StatCard({ stat, className }: StatCardProps) {
       <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
         {stat.label}
       </p>
-      <p className={cn("num mt-2 text-2xl font-semibold", TONE_CLASSES[stat.tone])}>
-        {stat.value}
-      </p>
+      <p className={cn("num mt-2 text-2xl font-semibold", TONE_CLASSES[stat.tone])}>{stat.value}</p>
       <p className="mt-1 text-xs text-muted-foreground">{stat.helper}</p>
     </div>
   );

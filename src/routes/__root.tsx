@@ -1,7 +1,4 @@
-import {
-  QueryClient,
-  QueryClientProvider,
-} from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   HeadContent,
   Link,
@@ -12,39 +9,26 @@ import {
   useRouter,
   useRouterState,
 } from "@tanstack/react-router";
-import {
-  useEffect,
-  type ReactNode,
-} from "react";
+import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 
 import { AppShell } from "@/components/layout/AppShell";
 import { reportLovableError } from "@/lib/lovable-error-reporting";
-import {
-  SessionProvider,
-  useSession,
-} from "@/providers/session-provider";
-import {
-  THEME_INIT_SCRIPT,
-  ThemeProvider,
-} from "@/providers/theme-provider";
+import { canAccessPath } from "@/lib/route-access";
+import { SessionProvider, useSession } from "@/providers/session-provider";
+import { THEME_INIT_SCRIPT, ThemeProvider } from "@/providers/theme-provider";
 
 function NotFoundComponent() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
-        <h1 className="text-7xl font-bold text-foreground">
-          404
-        </h1>
+        <h1 className="text-7xl font-bold text-foreground">404</h1>
 
-        <h2 className="mt-4 text-xl font-semibold text-foreground">
-          Halaman tidak ditemukan
-        </h2>
+        <h2 className="mt-4 text-xl font-semibold text-foreground">Halaman tidak ditemukan</h2>
 
         <p className="mt-2 text-sm text-muted-foreground">
-          Halaman yang Anda cari tidak tersedia atau
-          sudah dipindahkan.
+          Halaman yang Anda cari tidak tersedia atau sudah dipindahkan.
         </p>
 
         <div className="mt-6">
@@ -60,18 +44,14 @@ function NotFoundComponent() {
   );
 }
 
-function ErrorComponent({
-  error,
-  reset,
-}: {
-  error: Error;
-  reset: () => void;
-}) {
+function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   console.error(error);
 
   const router = useRouter();
 
-  // Melaporkan error root route ke error reporter milik Lovable.
+  /*
+   * Melaporkan error root route ke error reporter milik Lovable.
+   */
   useEffect(() => {
     reportLovableError(error, {
       boundary: "tanstack_root_error_component",
@@ -86,8 +66,7 @@ function ErrorComponent({
         </h1>
 
         <p className="mt-2 text-sm text-muted-foreground">
-          Terjadi kesalahan saat memuat halaman.
-          Silakan coba kembali.
+          Terjadi kesalahan saat memuat halaman. Silakan coba kembali.
         </p>
 
         <div className="mt-6 flex flex-wrap justify-center gap-2">
@@ -114,73 +93,67 @@ function ErrorComponent({
   );
 }
 
-export const Route =
-  createRootRouteWithContext<{
-    queryClient: QueryClient;
-  }>()({
-    head: () => ({
-      meta: [
-        {
-          charSet: "utf-8",
-        },
-        {
-          name: "viewport",
-          content:
-            "width=device-width, initial-scale=1",
-        },
-        {
-          title:
-            "Finance Request Management System",
-        },
-        {
-          name: "description",
-          content:
-            "Sistem internal pengajuan keuangan lintas unit bisnis: pengajuan, review, persetujuan, dan pembayaran dalam satu alur.",
-        },
-        {
-          property: "og:title",
-          content:
-            "Finance Request Management System",
-        },
-        {
-          property: "og:description",
-          content:
-            "Kelola pengajuan keuangan unit bisnis secara terpusat dan transparan.",
-        },
-        {
-          property: "og:type",
-          content: "website",
-        },
-        {
-          name: "twitter:card",
-          content: "summary_large_image",
-        },
-      ],
+export const Route = createRootRouteWithContext<{
+  queryClient: QueryClient;
+}>()({
+  head: () => ({
+    meta: [
+      {
+        charSet: "utf-8",
+      },
+      {
+        name: "viewport",
+        content: "width=device-width, initial-scale=1",
+      },
+      {
+        title: "Finance Request Management System",
+      },
+      {
+        name: "description",
+        content:
+          "Sistem internal pengajuan keuangan lintas unit bisnis: pengajuan, review, persetujuan, dan pembayaran dalam satu alur.",
+      },
+      {
+        property: "og:title",
+        content: "Finance Request Management System",
+      },
+      {
+        property: "og:description",
+        content: "Kelola pengajuan keuangan unit bisnis secara terpusat dan transparan.",
+      },
+      {
+        property: "og:type",
+        content: "website",
+      },
+      {
+        name: "twitter:card",
+        content: "summary_large_image",
+      },
+    ],
 
-      links: [
-        {
-          rel: "stylesheet",
-          href: appCss,
-        },
-        {
-          rel: "icon",
-          href: "/favicon.ico",
-          type: "image/x-icon",
-        },
-      ],
-    }),
+    links: [
+      {
+        rel: "stylesheet",
+        href: appCss,
+      },
+      {
+        rel: "icon",
+        href: "/favicon.ico",
+        type: "image/x-icon",
+      },
+    ],
+  }),
 
-    shellComponent: RootShell,
-    component: RootComponent,
-    notFoundComponent: NotFoundComponent,
-    errorComponent: ErrorComponent,
-  });
+  shellComponent: RootShell,
 
-function RootShell({
-  children,
-}: {
-  children: ReactNode;
-}) {
+  component: RootComponent,
+
+  notFoundComponent: NotFoundComponent,
+
+  errorComponent: ErrorComponent,
+});
+
+function RootShell({ children }: { children: ReactNode }) {
   return (
     <html lang="id" suppressHydrationWarning>
       <head>
@@ -210,9 +183,7 @@ function SessionLoadingScreen() {
           aria-hidden
         />
 
-        <p className="text-sm text-muted-foreground">
-          Memuat sesi pengguna...
-        </p>
+        <p className="text-sm text-muted-foreground">Memuat sesi pengguna...</p>
       </div>
     </div>
   );
@@ -223,35 +194,27 @@ function AuthenticatedApplication() {
     select: (state) => state.location.pathname,
   });
 
-  const {
-    isAuthenticated,
-    isHydrated,
-  } = useSession();
+  const { role, isAuthenticated, isHydrated } = useSession();
 
   const isLoginPage = pathname === "/login";
 
   /*
-   * Login page boleh dirender sebelum hydration karena
-   * tidak membutuhkan authenticated session.
+   * Tunggu hydration agar halaman Login tidak sempat berkedip
+   * sebelum session localStorage selesai dipulihkan.
    */
+  if (!isHydrated) {
+    return <SessionLoadingScreen />;
+  }
+
   if (isLoginPage) {
-    if (isHydrated && isAuthenticated) {
-      return (
-        <Navigate
-          to="/"
-          replace
-        />
-      );
+    if (isAuthenticated) {
+      return <Navigate to="/" replace />;
     }
 
     return <Outlet />;
   }
 
-  if (!isHydrated) {
-    return <SessionLoadingScreen />;
-  }
-
-  if (!isAuthenticated) {
+  if (!isAuthenticated || !role) {
     return (
       <Navigate
         to="/login"
@@ -263,6 +226,10 @@ function AuthenticatedApplication() {
     );
   }
 
+  if (!canAccessPath(role, pathname)) {
+    return <Navigate to="/" replace />;
+  }
+
   return (
     <AppShell>
       <Outlet />
@@ -271,8 +238,7 @@ function AuthenticatedApplication() {
 }
 
 function RootComponent() {
-  const { queryClient } =
-    Route.useRouteContext();
+  const { queryClient } = Route.useRouteContext();
 
   return (
     <QueryClientProvider client={queryClient}>

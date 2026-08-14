@@ -7,25 +7,18 @@ interface LoginSearch {
 }
 
 export const Route = createFileRoute("/login")({
-  validateSearch: (
-    search: Record<string, unknown>,
-  ): LoginSearch => ({
-    redirect:
-      typeof search.redirect === "string"
-        ? search.redirect
-        : undefined,
+  validateSearch: (search: Record<string, unknown>): LoginSearch => ({
+    redirect: typeof search.redirect === "string" ? search.redirect : undefined,
   }),
 
   head: () => ({
     meta: [
       {
-        title:
-          "Masuk | Finance Request Management System",
+        title: "Masuk | Finance Request Management System",
       },
       {
         name: "description",
-        content:
-          "Masuk ke Finance Request Management System.",
+        content: "Masuk ke Finance Request Management System.",
       },
     ],
   }),

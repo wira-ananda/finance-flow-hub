@@ -1,7 +1,4 @@
-import {
-  useState,
-  type ReactNode,
-} from "react";
+import { useState, type MouseEvent, type ReactNode } from "react";
 
 import {
   AlertDialog,
@@ -16,17 +13,13 @@ import {
 
 interface ConfirmationDialogProps {
   open: boolean;
-  onOpenChange: (
-    open: boolean,
-  ) => void;
+  onOpenChange: (open: boolean) => void;
   title: string;
   description: string;
   confirmLabel?: string;
   cancelLabel?: string;
   destructive?: boolean;
-  onConfirm:
-    | (() => void)
-    | (() => Promise<void>);
+  onConfirm: () => boolean | void | Promise<boolean | void>;
   children?: ReactNode;
 }
 
@@ -41,87 +34,58 @@ export function ConfirmationDialog({
   onConfirm,
   children,
 }: ConfirmationDialogProps) {
-  const [
-    isConfirming,
-    setIsConfirming,
-  ] = useState(false);
+  const [isConfirming, setIsConfirming] = useState(false);
 
-  const handleConfirm =
-    async (
-      event: React.MouseEvent,
-    ) => {
-      event.preventDefault();
+  const handleConfirm = async (event: MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
 
-      if (isConfirming) {
-        return;
-      }
+    if (isConfirming) {
+      return;
+    }
 
-      setIsConfirming(true);
+    setIsConfirming(true);
 
-      try {
-        await onConfirm();
+    try {
+      const result = await onConfirm();
 
+      if (result !== false) {
         onOpenChange(false);
-      } finally {
-        setIsConfirming(false);
       }
-    };
+    } finally {
+      setIsConfirming(false);
+    }
+  };
 
   return (
     <AlertDialog
       open={open}
-      onOpenChange={(
-        nextOpen,
-      ) => {
-        if (
-          isConfirming
-        ) {
-          return;
+      onOpenChange={(nextOpen) => {
+        if (!isConfirming) {
+          onOpenChange(nextOpen);
         }
-
-        onOpenChange(
-          nextOpen,
-        );
       }}
     >
       <AlertDialogContent className="border-border bg-popover">
         <AlertDialogHeader>
-          <AlertDialogTitle>
-            {title}
-          </AlertDialogTitle>
-
-          <AlertDialogDescription>
-            {description}
-          </AlertDialogDescription>
+          <AlertDialogTitle>{title}</AlertDialogTitle>
+          <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
 
         {children}
 
         <AlertDialogFooter>
-          <AlertDialogCancel
-            disabled={
-              isConfirming
-            }
-          >
-            {cancelLabel}
-          </AlertDialogCancel>
+          <AlertDialogCancel disabled={isConfirming}>{cancelLabel}</AlertDialogCancel>
 
           <AlertDialogAction
-            disabled={
-              isConfirming
-            }
-            onClick={
-              handleConfirm
-            }
+            disabled={isConfirming}
+            onClick={handleConfirm}
             className={
               destructive
                 ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
                 : "bg-primary text-primary-foreground hover:bg-primary-hover"
             }
           >
-            {isConfirming
-              ? "Memproses..."
-              : confirmLabel}
+            {isConfirming ? "Memproses..." : confirmLabel}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

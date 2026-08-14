@@ -1,9 +1,4 @@
-import type {
-  FinanceRequest,
-  NavItem,
-  User,
-  UserRole,
-} from "@/types";
+import type { FinanceRequest, NavItem, User, UserRole } from "@/types";
 
 export type RequestAction =
   | "VIEW"
@@ -13,55 +8,36 @@ export type RequestAction =
   | "REQUEST_REVISION"
   | "REJECT"
   | "APPROVE"
-  | "PROCESS_PAYMENT"
-  | "UPLOAD_APPROVAL_LETTER"
-  | "UPLOAD_TRANSFER_PROOF";
+  | "PROCESS_PAYMENT";
 
-export const ACTION_LABELS: Record<
-  RequestAction,
-  string
-> = {
+export const ACTION_LABELS: Record<RequestAction, string> = {
   VIEW: "Lihat Detail",
   EDIT: "Ubah Pengajuan",
   SUBMIT: "Ajukan",
   START_REVIEW: "Mulai Review",
-  REQUEST_REVISION:
-    "Minta Revisi",
+  REQUEST_REVISION: "Minta Revisi",
   REJECT: "Tolak",
   APPROVE: "Setujui",
-  PROCESS_PAYMENT:
-    "Proses Pembayaran",
-  UPLOAD_APPROVAL_LETTER:
-    "Unggah Surat Persetujuan",
-  UPLOAD_TRANSFER_PROOF:
-    "Unggah Bukti Transfer",
+  PROCESS_PAYMENT: "Proses Pembayaran",
 };
 
 /**
- * Memeriksa apakah user boleh melihat sebuah pengajuan.
+ * Memeriksa apakah user dapat melihat sebuah pengajuan.
  */
-export function canViewRequest(
-  user: User,
-  request: FinanceRequest,
-): boolean {
+export function canViewRequest(user: User, request: FinanceRequest): boolean {
+  if (!user.active) {
+    return false;
+  }
+
   switch (user.role) {
     case "UNIT_USER":
-      return (
-        request.businessUnitId ===
-        user.businessUnitId
-      );
+      return request.businessUnitId === user.businessUnitId;
 
     case "FINANCE_REVIEWER":
-      return request.status !==
-        "DRAFT";
+      return request.status !== "DRAFT";
 
     case "FINANCE_PAYMENT":
-      return [
-        "APPROVED",
-        "PAID",
-      ].includes(
-        request.status,
-      );
+      return ["APPROVED", "PAID"].includes(request.status);
 
     case "ADMIN":
       return true;
@@ -69,19 +45,10 @@ export function canViewRequest(
 }
 
 /**
- * Memeriksa permission action berdasarkan role dan status.
+ * Memeriksa apakah user dapat menjalankan action pada pengajuan.
  */
-export function canPerform(
-  user: User,
-  request: FinanceRequest,
-  action: RequestAction,
-): boolean {
-  if (
-    !canViewRequest(
-      user,
-      request,
-    )
-  ) {
+export function canPerform(user: User, request: FinanceRequest, action: RequestAction): boolean {
+  if (!canViewRequest(user, request)) {
     return false;
   }
 
@@ -90,88 +57,30 @@ export function canPerform(
       return true;
 
     case "EDIT":
-      return (
-        user.role ===
-          "UNIT_USER" &&
-        request.requesterId ===
-          user.id &&
-        [
-          "DRAFT",
-          "REVISION_REQUIRED",
-        ].includes(
-          request.status,
-        )
-      );
-
     case "SUBMIT":
       return (
-        user.role ===
-          "UNIT_USER" &&
-        request.requesterId ===
-          user.id &&
-        [
-          "DRAFT",
-          "REVISION_REQUIRED",
-        ].includes(
-          request.status,
-        )
+        user.role === "UNIT_USER" &&
+        request.requesterId === user.id &&
+        ["DRAFT", "REVISION_REQUIRED"].includes(request.status)
       );
 
     case "START_REVIEW":
-      return (
-        user.role ===
-          "FINANCE_REVIEWER" &&
-        request.status ===
-          "SUBMITTED"
-      );
+      return user.role === "FINANCE_REVIEWER" && request.status === "SUBMITTED";
 
     case "REQUEST_REVISION":
     case "REJECT":
     case "APPROVE":
-      return (
-        user.role ===
-          "FINANCE_REVIEWER" &&
-        request.status ===
-          "UNDER_REVIEW"
-      );
-
-    case "UPLOAD_APPROVAL_LETTER":
-      return (
-        user.role ===
-          "FINANCE_REVIEWER" &&
-        request.status ===
-          "APPROVED"
-      );
+      return user.role === "FINANCE_REVIEWER" && request.status === "UNDER_REVIEW";
 
     case "PROCESS_PAYMENT":
-      return (
-        user.role ===
-          "FINANCE_PAYMENT" &&
-        request.status ===
-          "APPROVED"
-      );
-
-    case "UPLOAD_TRANSFER_PROOF":
-      return (
-        user.role ===
-          "FINANCE_PAYMENT" &&
-        [
-          "APPROVED",
-          "PAID",
-        ].includes(
-          request.status,
-        )
-      );
+      return user.role === "FINANCE_PAYMENT" && request.status === "APPROVED";
   }
 }
 
 /**
- * Mengambil action yang tersedia untuk sebuah pengajuan.
+ * Mengambil action utama yang tersedia pada detail pengajuan.
  */
-export function availableActions(
-  user: User,
-  request: FinanceRequest,
-): RequestAction[] {
+export function availableActions(user: User, request: FinanceRequest): RequestAction[] {
   const actions: RequestAction[] = [
     "EDIT",
     "SUBMIT",
@@ -179,30 +88,15 @@ export function availableActions(
     "REQUEST_REVISION",
     "REJECT",
     "APPROVE",
-    "UPLOAD_APPROVAL_LETTER",
     "PROCESS_PAYMENT",
-    "UPLOAD_TRANSFER_PROOF",
   ];
 
-  return actions.filter(
-    (action) =>
-      canPerform(
-        user,
-        request,
-        action,
-      ),
-  );
+  return actions.filter((action) => canPerform(user, request, action));
 }
 
 /**
- * Memfilter menu navigasi berdasarkan role.
+ * Memfilter navigasi berdasarkan role aktif.
  */
-export function navItemsForRole(
-  role: UserRole,
-  items: NavItem[],
-): NavItem[] {
-  return items.filter(
-    (item) =>
-      item.roles.includes(role),
-  );
+export function navItemsForRole(role: UserRole, items: NavItem[]): NavItem[] {
+  return items.filter((item) => item.roles.includes(role));
 }

@@ -1,28 +1,17 @@
-import {
-  useMemo,
-  useSyncExternalStore,
-} from "react";
+import { useMemo, useSyncExternalStore } from "react";
 
 import {
   getMockRequestServerSnapshot,
   getMockRequestSnapshot,
   subscribeMockRequests,
 } from "@/data/repositories/mock-request.repository";
-import {
-  getRequest,
-  listRequests,
-} from "@/services/request.service";
-import type {
-  FinanceRequest,
-  User,
-} from "@/types";
+import { getRequest, listRequests } from "@/services/request.service";
+import type { FinanceRequest, User } from "@/types";
 
 /**
  * Membaca daftar request secara reactive dari mock repository.
  */
-export function useRequests(
-  user: User | null,
-): FinanceRequest[] {
+export function useRequests(user: User | null): FinanceRequest[] {
   const snapshot = useSyncExternalStore(
     subscribeMockRequests,
     getMockRequestSnapshot,
@@ -34,14 +23,8 @@ export function useRequests(
       return [];
     }
 
-    return listRequests(
-      user,
-      snapshot,
-    );
-  }, [
-    user,
-    snapshot,
-  ]);
+    return listRequests(user, snapshot);
+  }, [user, snapshot]);
 }
 
 /**
@@ -62,14 +45,6 @@ export function useRequest(
       return undefined;
     }
 
-    return getRequest(
-      user,
-      requestId,
-      snapshot,
-    );
-  }, [
-    user,
-    requestId,
-    snapshot,
-  ]);
+    return getRequest(user, requestId, snapshot);
+  }, [user, requestId, snapshot]);
 }

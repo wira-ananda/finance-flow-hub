@@ -1,69 +1,266 @@
-import { PageHeader } from "@/components/common/PageHeader";
-import { RoleSwitcher } from "@/components/layout/RoleSwitcher";
-import { ThemeSwitcher } from "@/components/layout/ThemeSwitcher";
-import { ROLE_LABELS, STATUS_LABELS, STATUS_ORDER } from "@/constants/status";
-import { StatusBadge } from "@/components/common/StatusBadge";
-import { useSession } from "@/providers/session-provider";
-import { getBusinessUnit } from "@/services/user.service";
+import { getMockBusinessUnitSnapshot } from "@/data/repositories/mock-business-unit.repository";
+import {
+  getMockUserSnapshot,
+  insertMockUser,
+  updateMockUser,
+} from "@/data/repositories/mock-user.repository";
+import { DEFAULT_USER_BY_ROLE } from "@/data/mock/users";
+import type { User, UserRole } from "@/types";
 
-export function SettingsPage() {
-  const { user, role } = useSession();
-  const unit = getBusinessUnit(user.businessUnitId);
-
-  return (
-    <>
-      <PageHeader
-        title="Pengaturan Sistem"
-        description="Preferensi tampilan dan konteks akses pengguna saat ini."
-      />
-
-      <section className="grid gap-4 lg:grid-cols-2">
-        <div className="space-y-3 rounded-lg border border-border bg-card p-4 shadow-card">
-          <h2 className="text-sm font-semibold text-foreground">Tampilan</h2>
-          <p className="text-sm text-muted-foreground">
-            Pilih mode tampilan Terang, Gelap, atau mengikuti pengaturan sistem.
-          </p>
-          <ThemeSwitcher variant="full" />
-        </div>
-
-        <div className="space-y-3 rounded-lg border border-border bg-card p-4 shadow-card">
-          <h2 className="text-sm font-semibold text-foreground">Role Pengembangan</h2>
-          <p className="text-sm text-muted-foreground">
-            Pengalih role sementara untuk keperluan pengembangan. Autentikasi sesungguhnya belum
-            diaktifkan.
-          </p>
-          <RoleSwitcher variant="full" />
-        </div>
-      </section>
-
-      <section className="space-y-3 rounded-lg border border-border bg-card p-4 shadow-card">
-        <h2 className="text-sm font-semibold text-foreground">Profil Aktif</h2>
-        <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {[
-            { label: "Nama", value: user.name },
-            { label: "Role", value: ROLE_LABELS[role] },
-            { label: "Unit Bisnis", value: unit ? unit.name : "Seluruh Unit" },
-            { label: "Jabatan", value: user.jobTitle },
-          ].map((item) => (
-            <div key={item.label}>
-              <dt className="text-xs text-muted-foreground">{item.label}</dt>
-              <dd className="text-sm font-medium text-foreground">{item.value}</dd>
-            </div>
-          ))}
-        </dl>
-      </section>
-
-      <section className="space-y-3 rounded-lg border border-border bg-card p-4 shadow-card">
-        <h2 className="text-sm font-semibold text-foreground">Referensi Status Pengajuan</h2>
-        <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-          {STATUS_ORDER.map((status) => (
-            <li key={status} className="flex items-center gap-2">
-              <StatusBadge status={status} />
-              <span className="text-xs text-muted-foreground">{STATUS_LABELS[status]}</span>
-            </li>
-          ))}
-        </ul>
-      </section>
-    </>
-  );
+export interface UserInput {
+  name: string;
+  email: string;
+  role: UserRole;
+  jobTitle: string;
+  businessUnitId: string | null;
 }
+
+function assertAdmin(actor: User): void {
+  if (actor.role !== "ADMIN" || !actor.active) {
+    throw new Error("Hanya Administrator aktif yang dapat mengelola pengguna.");
+  }
+}
+
+function createInitials(name: string): string {
+  return name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("");
+}
+
+function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
+function validateUserInput(input: UserInput, currentUserId?: string): void {
+  if (!input.name.trim()) {
+    throw new Error("Nama pengguna wajib diisi.");
+  }
+
+  if (!input.email.trim()) {
+    throw new Error("Email wajib diisi.");
+  }
+
+  if (!input.jobTitle.trim()) {
+    throw new Error("Jabatan wajib diisi.");
+  }
+
+  const duplicateEmail = getMockUserSnapshot().some(
+    (user) =>
+      user.id !== currentUserId && normalizeEmail(user.email) === normalizeEmail(input.email),
+  );
+
+  if (duplicateEmail) {
+    throw new Error("Email sudah digunakan pengguna lain.");
+  }
+
+  if (input.role !== "UNIT_USER") {
+    return;
+  }
+
+  if (!input.businessUnitId) {
+    throw new Error("Unit Bisnis wajib dipilih untuk pengguna Unit Bisnis.");
+  }
+
+  const unit = getMockBusinessUnitSnapshot().find((item) => item.id === input.businessUnitId);
+
+  if (!unit || !unit.active) {
+    throw new Error("Unit Bisnis tidak tersedia atau sedang nonaktif.");
+  }
+}
+
+/**
+ * Mengambil seluruh user dari mock repository.
+ */
+export function listUsers(): User[] {
+  return [...getMockUserSnapshot()];
+}
+
+/**
+ * Mengambil seluruh user aktif.
+ *
+ * UNIT_USER pada Unit Bisnis nonaktif dianggap
+ * tidak memiliki akses aktif.
+ */
+export function listActiveUsers(): User[] {
+  const units = getMockBusinessUnitSnapshot();
+
+  return getMockUserSnapshot().filter((user) => {
+    if (!user.active) {
+      return false;
+    }
+
+    if (user.role !== "UNIT_USER") {
+      return true;
+    }
+
+    return units.some((unit) => unit.id === user.businessUnitId && unit.active);
+  });
+}
+
+/**
+ * Mengambil user berdasarkan ID.
+ */
+export function getUserById(id: string): User | undefined {
+  return getMockUserSnapshot().find((user) => user.id === id);
+}
+
+/**
+ * Mengambil pengguna aktif default
+ * untuk role tertentu.
+ *
+ * Digunakan Development Role Switcher.
+ * Jika default user tidak tersedia,
+ * service mencari user aktif lain dengan role yang sama.
+ */
+export function getUserForRole(role: UserRole): User {
+  const defaultId = DEFAULT_USER_BY_ROLE[role];
+
+  const users = listActiveUsers();
+
+  const defaultUser = users.find((user) => user.id === defaultId && user.role === role);
+
+  if (defaultUser) {
+    return defaultUser;
+  }
+
+  const fallbackUser = users.find((user) => user.role === role);
+
+  if (!fallbackUser) {
+    throw new Error(`Tidak ada pengguna aktif untuk role ${role}.`);
+  }
+
+  return fallbackUser;
+}
+
+/**
+ * ADMIN: membuat user baru.
+ */
+export function createUser(actor: User, input: UserInput): User {
+  assertAdmin(actor);
+
+  validateUserInput(input);
+
+  const user: User = {
+    id: `usr-${Date.now()}`,
+
+    name: input.name.trim(),
+
+    email: normalizeEmail(input.email),
+
+    role: input.role,
+
+    jobTitle: input.jobTitle.trim(),
+
+    businessUnitId: input.role === "UNIT_USER" ? input.businessUnitId : null,
+
+    initials: createInitials(input.name),
+
+    active: true,
+  };
+
+  return insertMockUser(user);
+}
+
+/**
+ * ADMIN: memperbarui user.
+ */
+export function updateUser(actor: User, userId: string, input: UserInput): User {
+  assertAdmin(actor);
+
+  const existing = getUserById(userId);
+
+  if (!existing) {
+    throw new Error("Pengguna tidak ditemukan.");
+  }
+
+  if (existing.id === actor.id && input.role !== "ADMIN") {
+    throw new Error("Administrator aktif tidak dapat mengubah role dirinya sendiri.");
+  }
+
+  validateUserInput(input, userId);
+
+  const updated = updateMockUser(userId, (user) => ({
+    ...user,
+
+    name: input.name.trim(),
+
+    email: normalizeEmail(input.email),
+
+    role: input.role,
+
+    jobTitle: input.jobTitle.trim(),
+
+    businessUnitId: input.role === "UNIT_USER" ? input.businessUnitId : null,
+
+    initials: createInitials(input.name),
+  }));
+
+  if (!updated) {
+    throw new Error("Gagal memperbarui pengguna.");
+  }
+
+  return updated;
+}
+
+/**
+ * ADMIN: mengaktifkan atau menonaktifkan user.
+ */
+export function setUserActive(actor: User, userId: string, active: boolean): User {
+  assertAdmin(actor);
+
+  const existing = getUserById(userId);
+
+  if (!existing) {
+    throw new Error("Pengguna tidak ditemukan.");
+  }
+
+  if (existing.id === actor.id && !active) {
+    throw new Error("Anda tidak dapat menonaktifkan akun Administrator yang sedang digunakan.");
+  }
+
+  if (active && existing.role === "UNIT_USER") {
+    const unit = getMockBusinessUnitSnapshot().find((item) => item.id === existing.businessUnitId);
+
+    if (!unit || !unit.active) {
+      throw new Error("Pengguna tidak dapat diaktifkan karena Unit Bisnisnya sedang nonaktif.");
+    }
+  }
+
+  if (!active) {
+    const remainingUsers = listActiveUsers().filter(
+      (user) => user.role === existing.role && user.id !== existing.id,
+    );
+
+    if (remainingUsers.length === 0) {
+      throw new Error(
+        "Minimal satu pengguna aktif harus tersedia untuk setiap role selama development.",
+      );
+    }
+  }
+
+  const updated = updateMockUser(userId, (user) => ({
+    ...user,
+    active,
+  }));
+
+  if (!updated) {
+    throw new Error("Gagal mengubah status pengguna.");
+  }
+
+  return updated;
+}
+
+/**
+ * Compatibility export.
+ *
+ * Dipertahankan agar file lama yang masih
+ * mengimpor helper Unit Bisnis dari user.service
+ * tidak langsung rusak.
+ *
+ * Untuk kode baru, lebih baik import langsung
+ * dari business-unit.service.
+ */
+export { getBusinessUnit, listBusinessUnits } from "@/services/business-unit.service";

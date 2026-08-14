@@ -7,6 +7,7 @@ export const MOCK_BUSINESS_UNITS: BusinessUnit[] = [
     name: "MAW Logistik Nusantara",
     costCenter: "CC-1001",
     managerName: "Bagas Prasetyo",
+    active: true,
   },
   {
     id: "bu-02",
@@ -14,6 +15,7 @@ export const MOCK_BUSINESS_UNITS: BusinessUnit[] = [
     name: "MAW Engineering Services",
     costCenter: "CC-1002",
     managerName: "Ratna Kusumawardani",
+    active: true,
   },
   {
     id: "bu-03",
@@ -21,6 +23,7 @@ export const MOCK_BUSINESS_UNITS: BusinessUnit[] = [
     name: "MAW Retail Indonesia",
     costCenter: "CC-1003",
     managerName: "Dimas Ardiansyah",
+    active: true,
   },
   {
     id: "bu-04",
@@ -28,5 +31,6 @@ export const MOCK_BUSINESS_UNITS: BusinessUnit[] = [
     name: "MAW Property Development",
     costCenter: "CC-1004",
     managerName: "Siti Nurhaliza Putri",
+    active: true,
   },
 ];
