@@ -31,8 +31,9 @@ export function BusinessUnitPage() {
                 </p>
                 <h2 className="mt-1 text-sm font-semibold text-foreground">{unit.name}</h2>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  {unit.city} · PIC {unit.picName}
+                  {unit.costCenter} · Manajer {unit.managerName}
                 </p>
+
               </div>
               <dl className="grid grid-cols-2 gap-3 border-t border-border pt-3 text-sm">
                 <div>
