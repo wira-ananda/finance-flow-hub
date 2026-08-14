@@ -10,33 +10,149 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as PembayaranRouteImport } from './routes/pembayaran'
+import { Route as PengajuanRouteImport } from './routes/pengajuan'
+import { Route as PengaturanRouteImport } from './routes/pengaturan'
+import { Route as PenggunaRouteImport } from './routes/pengguna'
+import { Route as ReviewRouteImport } from './routes/review'
+import { Route as UnitBisnisRouteImport } from './routes/unit-bisnis'
+import { Route as PengajuanIndexRouteImport } from './routes/pengajuan.index'
+import { Route as PengajuanIdRouteImport } from './routes/pengajuan.$id'
+import { Route as PengajuanBaruRouteImport } from './routes/pengajuan.baru'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PembayaranRoute = PembayaranRouteImport.update({
+  id: '/pembayaran',
+  path: '/pembayaran',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PengajuanRoute = PengajuanRouteImport.update({
+  id: '/pengajuan',
+  path: '/pengajuan',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PengaturanRoute = PengaturanRouteImport.update({
+  id: '/pengaturan',
+  path: '/pengaturan',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PenggunaRoute = PenggunaRouteImport.update({
+  id: '/pengguna',
+  path: '/pengguna',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReviewRoute = ReviewRouteImport.update({
+  id: '/review',
+  path: '/review',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UnitBisnisRoute = UnitBisnisRouteImport.update({
+  id: '/unit-bisnis',
+  path: '/unit-bisnis',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PengajuanIndexRoute = PengajuanIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => PengajuanRoute,
+} as any)
+const PengajuanIdRoute = PengajuanIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => PengajuanRoute,
+} as any)
+const PengajuanBaruRoute = PengajuanBaruRouteImport.update({
+  id: '/baru',
+  path: '/baru',
+  getParentRoute: () => PengajuanRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/pembayaran': typeof PembayaranRoute
+  '/pengajuan': typeof PengajuanRouteWithChildren
+  '/pengaturan': typeof PengaturanRoute
+  '/pengguna': typeof PenggunaRoute
+  '/review': typeof ReviewRoute
+  '/unit-bisnis': typeof UnitBisnisRoute
+  '/pengajuan/$id': typeof PengajuanIdRoute
+  '/pengajuan/baru': typeof PengajuanBaruRoute
+  '/pengajuan/': typeof PengajuanIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/pembayaran': typeof PembayaranRoute
+  '/pengaturan': typeof PengaturanRoute
+  '/pengguna': typeof PenggunaRoute
+  '/review': typeof ReviewRoute
+  '/unit-bisnis': typeof UnitBisnisRoute
+  '/pengajuan/$id': typeof PengajuanIdRoute
+  '/pengajuan/baru': typeof PengajuanBaruRoute
+  '/pengajuan': typeof PengajuanIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/pembayaran': typeof PembayaranRoute
+  '/pengajuan': typeof PengajuanRouteWithChildren
+  '/pengaturan': typeof PengaturanRoute
+  '/pengguna': typeof PenggunaRoute
+  '/review': typeof ReviewRoute
+  '/unit-bisnis': typeof UnitBisnisRoute
+  '/pengajuan/$id': typeof PengajuanIdRoute
+  '/pengajuan/baru': typeof PengajuanBaruRoute
+  '/pengajuan/': typeof PengajuanIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/pembayaran'
+    | '/pengajuan'
+    | '/pengaturan'
+    | '/pengguna'
+    | '/review'
+    | '/unit-bisnis'
+    | '/pengajuan/$id'
+    | '/pengajuan/baru'
+    | '/pengajuan/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/pembayaran'
+    | '/pengaturan'
+    | '/pengguna'
+    | '/review'
+    | '/unit-bisnis'
+    | '/pengajuan/$id'
+    | '/pengajuan/baru'
+    | '/pengajuan'
+  id:
+    | '__root__'
+    | '/'
+    | '/pembayaran'
+    | '/pengajuan'
+    | '/pengaturan'
+    | '/pengguna'
+    | '/review'
+    | '/unit-bisnis'
+    | '/pengajuan/$id'
+    | '/pengajuan/baru'
+    | '/pengajuan/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  PembayaranRoute: typeof PembayaranRoute
+  PengajuanRoute: typeof PengajuanRouteWithChildren
+  PengaturanRoute: typeof PengaturanRoute
+  PenggunaRoute: typeof PenggunaRoute
+  ReviewRoute: typeof ReviewRoute
+  UnitBisnisRoute: typeof UnitBisnisRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +164,96 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/pembayaran': {
+      id: '/pembayaran'
+      path: '/pembayaran'
+      fullPath: '/pembayaran'
+      preLoaderRoute: typeof PembayaranRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pengajuan': {
+      id: '/pengajuan'
+      path: '/pengajuan'
+      fullPath: '/pengajuan'
+      preLoaderRoute: typeof PengajuanRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pengaturan': {
+      id: '/pengaturan'
+      path: '/pengaturan'
+      fullPath: '/pengaturan'
+      preLoaderRoute: typeof PengaturanRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pengguna': {
+      id: '/pengguna'
+      path: '/pengguna'
+      fullPath: '/pengguna'
+      preLoaderRoute: typeof PenggunaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/review': {
+      id: '/review'
+      path: '/review'
+      fullPath: '/review'
+      preLoaderRoute: typeof ReviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/unit-bisnis': {
+      id: '/unit-bisnis'
+      path: '/unit-bisnis'
+      fullPath: '/unit-bisnis'
+      preLoaderRoute: typeof UnitBisnisRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pengajuan/': {
+      id: '/pengajuan/'
+      path: '/'
+      fullPath: '/pengajuan/'
+      preLoaderRoute: typeof PengajuanIndexRouteImport
+      parentRoute: typeof PengajuanRoute
+    }
+    '/pengajuan/$id': {
+      id: '/pengajuan/$id'
+      path: '/$id'
+      fullPath: '/pengajuan/$id'
+      preLoaderRoute: typeof PengajuanIdRouteImport
+      parentRoute: typeof PengajuanRoute
+    }
+    '/pengajuan/baru': {
+      id: '/pengajuan/baru'
+      path: '/baru'
+      fullPath: '/pengajuan/baru'
+      preLoaderRoute: typeof PengajuanBaruRouteImport
+      parentRoute: typeof PengajuanRoute
+    }
   }
 }
 
+interface PengajuanRouteChildren {
+  PengajuanIdRoute: typeof PengajuanIdRoute
+  PengajuanBaruRoute: typeof PengajuanBaruRoute
+  PengajuanIndexRoute: typeof PengajuanIndexRoute
+}
+
+const PengajuanRouteChildren: PengajuanRouteChildren = {
+  PengajuanIdRoute: PengajuanIdRoute,
+  PengajuanBaruRoute: PengajuanBaruRoute,
+  PengajuanIndexRoute: PengajuanIndexRoute,
+}
+
+const PengajuanRouteWithChildren = PengajuanRoute._addFileChildren(
+  PengajuanRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  PembayaranRoute: PembayaranRoute,
+  PengajuanRoute: PengajuanRouteWithChildren,
+  PengaturanRoute: PengaturanRoute,
+  PenggunaRoute: PenggunaRoute,
+  ReviewRoute: ReviewRoute,
+  UnitBisnisRoute: UnitBisnisRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
