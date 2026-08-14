@@ -23,7 +23,7 @@ export function SettingsPage() {
           <p className="text-sm text-muted-foreground">
             Pilih mode tampilan Terang, Gelap, atau mengikuti pengaturan sistem.
           </p>
-          <ThemeSwitcher variant="inline" />
+          <ThemeSwitcher variant="full" />
         </div>
 
         <div className="space-y-3 rounded-lg border border-border bg-card p-4 shadow-card">
@@ -32,7 +32,7 @@ export function SettingsPage() {
             Pengalih role sementara untuk keperluan pengembangan. Autentikasi sesungguhnya belum
             diaktifkan.
           </p>
-          <RoleSwitcher variant="inline" />
+          <RoleSwitcher variant="full" />
         </div>
       </section>
 
