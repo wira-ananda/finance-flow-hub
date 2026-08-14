@@ -1,4 +1,8 @@
-export type UserRole = "UNIT_USER" | "FINANCE_REVIEWER" | "FINANCE_PAYMENT" | "ADMIN";
+export type UserRole =
+  | "UNIT_USER"
+  | "FINANCE_REVIEWER"
+  | "FINANCE_PAYMENT"
+  | "ADMIN";
 
 export type RequestStatus =
   | "DRAFT"
@@ -15,6 +19,11 @@ export type RequestCategory =
   | "PERJALANAN_DINAS"
   | "REIMBURSEMENT"
   | "PEMASARAN";
+
+export type RequestDocumentType =
+  | "LAMPIRAN"
+  | "SURAT_PERSETUJUAN"
+  | "BUKTI_TRANSFER";
 
 export interface BusinessUnit {
   id: string;
@@ -38,7 +47,7 @@ export interface User {
 export interface RequestDocument {
   id: string;
   name: string;
-  type: "LAMPIRAN" | "SURAT_PERSETUJUAN" | "BUKTI_TRANSFER";
+  type: RequestDocumentType;
   sizeKb: number;
   uploadedAt: string;
   uploadedBy: string;
@@ -49,8 +58,10 @@ export type ActivityAction =
   | "SUBMITTED"
   | "REVIEW_STARTED"
   | "REVISION_REQUESTED"
+  | "RESUBMITTED"
   | "REJECTED"
   | "APPROVED"
+  | "APPROVAL_LETTER_GENERATED"
   | "PAID"
   | "COMMENT";
 
@@ -89,7 +100,12 @@ export interface DashboardStat {
   label: string;
   value: string;
   helper: string;
-  tone: "neutral" | "primary" | "warning" | "success" | "danger";
+  tone:
+    | "neutral"
+    | "primary"
+    | "warning"
+    | "success"
+    | "danger";
 }
 
 export interface NavItem {
@@ -97,5 +113,8 @@ export interface NavItem {
   to: string;
   icon: string;
   roles: UserRole[];
-  group: "Utama" | "Finance" | "Administrasi";
+  group:
+    | "Utama"
+    | "Finance"
+    | "Administrasi";
 }

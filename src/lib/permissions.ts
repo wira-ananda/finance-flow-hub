@@ -25,7 +25,8 @@ export const ACTION_LABELS: Record<
   EDIT: "Ubah Pengajuan",
   SUBMIT: "Ajukan",
   START_REVIEW: "Mulai Review",
-  REQUEST_REVISION: "Minta Revisi",
+  REQUEST_REVISION:
+    "Minta Revisi",
   REJECT: "Tolak",
   APPROVE: "Setujui",
   PROCESS_PAYMENT:
@@ -37,7 +38,7 @@ export const ACTION_LABELS: Record<
 };
 
 /**
- * Memeriksa apakah user dapat melihat sebuah pengajuan.
+ * Memeriksa apakah user boleh melihat sebuah pengajuan.
  */
 export function canViewRequest(
   user: User,
@@ -51,13 +52,16 @@ export function canViewRequest(
       );
 
     case "FINANCE_REVIEWER":
-      return request.status !== "DRAFT";
+      return request.status !==
+        "DRAFT";
 
     case "FINANCE_PAYMENT":
       return [
         "APPROVED",
         "PAID",
-      ].includes(request.status);
+      ].includes(
+        request.status,
+      );
 
     case "ADMIN":
       return true;
@@ -65,8 +69,7 @@ export function canViewRequest(
 }
 
 /**
- * Memeriksa apakah user dapat menjalankan action tertentu
- * berdasarkan role dan status pengajuan.
+ * Memeriksa permission action berdasarkan role dan status.
  */
 export function canPerform(
   user: User,
@@ -74,7 +77,10 @@ export function canPerform(
   action: RequestAction,
 ): boolean {
   if (
-    !canViewRequest(user, request)
+    !canViewRequest(
+      user,
+      request,
+    )
   ) {
     return false;
   }
@@ -85,24 +91,30 @@ export function canPerform(
 
     case "EDIT":
       return (
-        user.role === "UNIT_USER" &&
+        user.role ===
+          "UNIT_USER" &&
         request.requesterId ===
           user.id &&
         [
           "DRAFT",
           "REVISION_REQUIRED",
-        ].includes(request.status)
+        ].includes(
+          request.status,
+        )
       );
 
     case "SUBMIT":
       return (
-        user.role === "UNIT_USER" &&
+        user.role ===
+          "UNIT_USER" &&
         request.requesterId ===
           user.id &&
         [
           "DRAFT",
           "REVISION_REQUIRED",
-        ].includes(request.status)
+        ].includes(
+          request.status,
+        )
       );
 
     case "START_REVIEW":
@@ -146,14 +158,15 @@ export function canPerform(
         [
           "APPROVED",
           "PAID",
-        ].includes(request.status)
+        ].includes(
+          request.status,
+        )
       );
   }
 }
 
 /**
- * Mengambil daftar action yang tersedia untuk user
- * pada suatu pengajuan.
+ * Mengambil action yang tersedia untuk sebuah pengajuan.
  */
 export function availableActions(
   user: User,
@@ -163,31 +176,33 @@ export function availableActions(
     "EDIT",
     "SUBMIT",
     "START_REVIEW",
-    "APPROVE",
     "REQUEST_REVISION",
     "REJECT",
+    "APPROVE",
     "UPLOAD_APPROVAL_LETTER",
     "PROCESS_PAYMENT",
     "UPLOAD_TRANSFER_PROOF",
   ];
 
-  return actions.filter((action) =>
-    canPerform(
-      user,
-      request,
-      action,
-    ),
+  return actions.filter(
+    (action) =>
+      canPerform(
+        user,
+        request,
+        action,
+      ),
   );
 }
 
 /**
- * Memfilter navigasi berdasarkan role.
+ * Memfilter menu navigasi berdasarkan role.
  */
 export function navItemsForRole(
   role: UserRole,
   items: NavItem[],
 ): NavItem[] {
-  return items.filter((item) =>
-    item.roles.includes(role),
+  return items.filter(
+    (item) =>
+      item.roles.includes(role),
   );
 }
