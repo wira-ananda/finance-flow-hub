@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as PembayaranRouteImport } from './routes/pembayaran'
 import { Route as PengajuanRouteImport } from './routes/pengajuan'
 import { Route as PengaturanRouteImport } from './routes/pengaturan'
@@ -23,6 +24,11 @@ import { Route as PengajuanBaruRouteImport } from './routes/pengajuan.baru'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PembayaranRoute = PembayaranRouteImport.update({
@@ -73,6 +79,7 @@ const PengajuanBaruRoute = PengajuanBaruRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
   '/pembayaran': typeof PembayaranRoute
   '/pengajuan': typeof PengajuanRouteWithChildren
   '/pengaturan': typeof PengaturanRoute
@@ -85,6 +92,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
   '/pembayaran': typeof PembayaranRoute
   '/pengaturan': typeof PengaturanRoute
   '/pengguna': typeof PenggunaRoute
@@ -97,6 +105,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
   '/pembayaran': typeof PembayaranRoute
   '/pengajuan': typeof PengajuanRouteWithChildren
   '/pengaturan': typeof PengaturanRoute
@@ -111,6 +120,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/login'
     | '/pembayaran'
     | '/pengajuan'
     | '/pengaturan'
@@ -123,6 +133,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/login'
     | '/pembayaran'
     | '/pengaturan'
     | '/pengguna'
@@ -134,6 +145,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/login'
     | '/pembayaran'
     | '/pengajuan'
     | '/pengaturan'
@@ -147,6 +159,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  LoginRoute: typeof LoginRoute
   PembayaranRoute: typeof PembayaranRoute
   PengajuanRoute: typeof PengajuanRouteWithChildren
   PengaturanRoute: typeof PengaturanRoute
@@ -162,6 +175,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/pembayaran': {
@@ -248,6 +268,7 @@ const PengajuanRouteWithChildren = PengajuanRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  LoginRoute: LoginRoute,
   PembayaranRoute: PembayaranRoute,
   PengajuanRoute: PengajuanRouteWithChildren,
   PengaturanRoute: PengaturanRoute,

@@ -1,36 +1,58 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
-  Outlet,
+  QueryClient,
+  QueryClientProvider,
+} from "@tanstack/react-query";
+import {
+  HeadContent,
   Link,
+  Navigate,
+  Outlet,
+  Scripts,
   createRootRouteWithContext,
   useRouter,
-  HeadContent,
-  Scripts,
+  useRouterState,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import {
+  useEffect,
+  type ReactNode,
+} from "react";
 
 import appCss from "../styles.css?url";
-import { reportLovableError } from "../lib/lovable-error-reporting";
-import { AppShell } from "@/components/layout/AppShell";
-import { SessionProvider } from "@/providers/session-provider";
-import { ThemeProvider, THEME_INIT_SCRIPT } from "@/providers/theme-provider";
 
+import { AppShell } from "@/components/layout/AppShell";
+import { reportLovableError } from "@/lib/lovable-error-reporting";
+import {
+  SessionProvider,
+  useSession,
+} from "@/providers/session-provider";
+import {
+  THEME_INIT_SCRIPT,
+  ThemeProvider,
+} from "@/providers/theme-provider";
 
 function NotFoundComponent() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
-        <h1 className="text-7xl font-bold text-foreground">404</h1>
-        <h2 className="mt-4 text-xl font-semibold text-foreground">Page not found</h2>
+        <h1 className="text-7xl font-bold text-foreground">
+          404
+        </h1>
+
+        <h2 className="mt-4 text-xl font-semibold text-foreground">
+          Halaman tidak ditemukan
+        </h2>
+
         <p className="mt-2 text-sm text-muted-foreground">
-          The page you're looking for doesn't exist or has been moved.
+          Halaman yang Anda cari tidak tersedia atau
+          sudah dipindahkan.
         </p>
+
         <div className="mt-6">
           <Link
             to="/"
             className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
-            Go home
+            Kembali ke Dashboard
           </Link>
         </div>
       </div>
@@ -38,37 +60,53 @@ function NotFoundComponent() {
   );
 }
 
-function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
+function ErrorComponent({
+  error,
+  reset,
+}: {
+  error: Error;
+  reset: () => void;
+}) {
   console.error(error);
+
   const router = useRouter();
+
+  // Melaporkan error root route ke error reporter milik Lovable.
   useEffect(() => {
-    reportLovableError(error, { boundary: "tanstack_root_error_component" });
+    reportLovableError(error, {
+      boundary: "tanstack_root_error_component",
+    });
   }, [error]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
         <h1 className="text-xl font-semibold tracking-tight text-foreground">
-          This page didn't load
+          Halaman gagal dimuat
         </h1>
+
         <p className="mt-2 text-sm text-muted-foreground">
-          Something went wrong on our end. You can try refreshing or head back home.
+          Terjadi kesalahan saat memuat halaman.
+          Silakan coba kembali.
         </p>
+
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
+            type="button"
             onClick={() => {
               router.invalidate();
               reset();
             }}
             className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
-            Try again
+            Coba Lagi
           </button>
+
           <a
             href="/"
             className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
           >
-            Go home
+            Kembali ke Dashboard
           </a>
         </div>
       </div>
@@ -76,46 +114,85 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   );
 }
 
-export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
-  head: () => ({
-    meta: [
-      { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Finance Request Management System" },
-      {
-        name: "description",
-        content:
-          "Sistem internal pengajuan keuangan lintas unit bisnis: pengajuan, review, persetujuan, dan pembayaran dalam satu alur.",
-      },
-      { property: "og:title", content: "Finance Request Management System" },
-      {
-        property: "og:description",
-        content: "Kelola pengajuan keuangan unit bisnis secara terpusat dan transparan.",
-      },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
-    ],
-    links: [
-      {
-        rel: "stylesheet",
-        href: appCss,
-      },
-      { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
-    ],
-  }),
-  shellComponent: RootShell,
-  component: RootComponent,
-  notFoundComponent: NotFoundComponent,
-  errorComponent: ErrorComponent,
-});
+export const Route =
+  createRootRouteWithContext<{
+    queryClient: QueryClient;
+  }>()({
+    head: () => ({
+      meta: [
+        {
+          charSet: "utf-8",
+        },
+        {
+          name: "viewport",
+          content:
+            "width=device-width, initial-scale=1",
+        },
+        {
+          title:
+            "Finance Request Management System",
+        },
+        {
+          name: "description",
+          content:
+            "Sistem internal pengajuan keuangan lintas unit bisnis: pengajuan, review, persetujuan, dan pembayaran dalam satu alur.",
+        },
+        {
+          property: "og:title",
+          content:
+            "Finance Request Management System",
+        },
+        {
+          property: "og:description",
+          content:
+            "Kelola pengajuan keuangan unit bisnis secara terpusat dan transparan.",
+        },
+        {
+          property: "og:type",
+          content: "website",
+        },
+        {
+          name: "twitter:card",
+          content: "summary_large_image",
+        },
+      ],
 
-function RootShell({ children }: { children: ReactNode }) {
+      links: [
+        {
+          rel: "stylesheet",
+          href: appCss,
+        },
+        {
+          rel: "icon",
+          href: "/favicon.ico",
+          type: "image/x-icon",
+        },
+      ],
+    }),
+
+    shellComponent: RootShell,
+    component: RootComponent,
+    notFoundComponent: NotFoundComponent,
+    errorComponent: ErrorComponent,
+  });
+
+function RootShell({
+  children,
+}: {
+  children: ReactNode;
+}) {
   return (
     <html lang="id" suppressHydrationWarning>
       <head>
         <HeadContent />
-        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+
+        <script
+          dangerouslySetInnerHTML={{
+            __html: THEME_INIT_SCRIPT,
+          }}
+        />
       </head>
+
       <body>
         {children}
         <Scripts />
@@ -124,20 +201,86 @@ function RootShell({ children }: { children: ReactNode }) {
   );
 }
 
+function SessionLoadingScreen() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background">
+      <div className="flex flex-col items-center gap-3">
+        <span
+          className="size-7 animate-spin rounded-full border-2 border-primary/20 border-t-primary"
+          aria-hidden
+        />
+
+        <p className="text-sm text-muted-foreground">
+          Memuat sesi pengguna...
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function AuthenticatedApplication() {
+  const pathname = useRouterState({
+    select: (state) => state.location.pathname,
+  });
+
+  const {
+    isAuthenticated,
+    isHydrated,
+  } = useSession();
+
+  const isLoginPage = pathname === "/login";
+
+  /*
+   * Login page boleh dirender sebelum hydration karena
+   * tidak membutuhkan authenticated session.
+   */
+  if (isLoginPage) {
+    if (isHydrated && isAuthenticated) {
+      return (
+        <Navigate
+          to="/"
+          replace
+        />
+      );
+    }
+
+    return <Outlet />;
+  }
+
+  if (!isHydrated) {
+    return <SessionLoadingScreen />;
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <Navigate
+        to="/login"
+        search={{
+          redirect: pathname,
+        }}
+        replace
+      />
+    );
+  }
+
+  return (
+    <AppShell>
+      <Outlet />
+    </AppShell>
+  );
+}
+
 function RootComponent() {
-  const { queryClient } = Route.useRouteContext();
+  const { queryClient } =
+    Route.useRouteContext();
 
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <SessionProvider>
-          <AppShell>
-            {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-            <Outlet />
-          </AppShell>
+          <AuthenticatedApplication />
         </SessionProvider>
       </ThemeProvider>
     </QueryClientProvider>
   );
-
 }
