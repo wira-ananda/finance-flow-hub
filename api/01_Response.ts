@@ -1,9 +1,13 @@
+interface ApiErrorPayload {
+  code: string;
+  details: unknown | null;
+}
+
 interface ApiResponse<T = unknown> {
   success: boolean;
   data: T | null;
   message: string | null;
-  errorCode?: string;
-  details?: unknown;
+  error: ApiErrorPayload | null;
 }
 
 function successResponse<T>(
@@ -14,6 +18,7 @@ function successResponse<T>(
     success: true,
     data,
     message: message ?? null,
+    error: null,
   };
 
   return jsonResponse(payload);
@@ -28,8 +33,10 @@ function errorResponse(
     success: false,
     data: null,
     message,
-    errorCode,
-    details: details ?? null,
+    error: {
+      code: errorCode,
+      details: details ?? null,
+    },
   };
 
   return jsonResponse(payload);
