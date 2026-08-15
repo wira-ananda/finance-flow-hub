@@ -1,24 +1,44 @@
 import { Link } from "@tanstack/react-router";
+
 import { ArrowRight, FilePlus2 } from "lucide-react";
 
+import { ErrorState } from "@/components/common/ErrorState";
+
+import { LoadingState } from "@/components/common/LoadingState";
+
 import { PageHeader } from "@/components/common/PageHeader";
+
 import { StatCard } from "@/components/common/StatCard";
+
 import { StatusBadge } from "@/components/common/StatusBadge";
+
 import { RequestTable } from "@/components/requests/RequestTable";
+
 import { Button } from "@/components/ui/button";
+
 import { ACTIVITY_LABELS, ROLE_LABELS, STATUS_ORDER } from "@/constants/status";
+
 import { useBusinessUnits } from "@/hooks/use-business-units";
-import { useRequests } from "@/hooks/use-requests";
+
+import { useRequestsQuery } from "@/hooks/use-requests";
+
 import { useUsers } from "@/hooks/use-users";
+
 import { formatRelatif, formatRupiahCompact } from "@/lib/formatters";
+
 import { useSession } from "@/providers/session-provider";
+
 import { countByStatus, getDashboardStats } from "@/services/request.service";
+
 import type { UserRole } from "@/types";
 
 const ROLE_DESCRIPTION: Record<UserRole, string> = {
   UNIT_USER: "Pantau pengajuan keuangan unit Anda dan tindak lanjuti permintaan revisi.",
+
   FINANCE_REVIEWER: "Tinjau pengajuan masuk, minta revisi, setujui, atau tolak pengajuan.",
+
   FINANCE_PAYMENT: "Proses pembayaran pengajuan yang telah disetujui dan unggah bukti transfer.",
+
   ADMIN: "Pantau seluruh aktivitas pengajuan, pengguna, dan unit bisnis.",
 };
 
@@ -28,8 +48,10 @@ function getAllRoute(role: UserRole): AllRequestRoute {
   switch (role) {
     case "FINANCE_REVIEWER":
       return "/review";
+
     case "FINANCE_PAYMENT":
       return "/pembayaran";
+
     default:
       return "/pengajuan";
   }
@@ -38,16 +60,47 @@ function getAllRoute(role: UserRole): AllRequestRoute {
 export function DashboardPage() {
   const { user, role } = useSession();
 
-  const requests = useRequests(user);
+  const requestsQuery = useRequestsQuery(user);
+
   const users = useUsers();
+
   const businessUnits = useBusinessUnits();
 
   if (!user || !role) {
     return null;
   }
 
+  if (requestsQuery.isPending) {
+    return (
+      <>
+        <PageHeader title={`Selamat datang, ${user.name.split(" ")[0]}`} />
+
+        <LoadingState rows={7} />
+      </>
+    );
+  }
+
+  if (requestsQuery.isError) {
+    return (
+      <>
+        <PageHeader title={`Selamat datang, ${user.name.split(" ")[0]}`} />
+
+        <ErrorState
+          title="Dashboard gagal dimuat"
+          description={requestsQuery.error.message}
+          onRetry={() => {
+            void requestsQuery.refetch();
+          }}
+        />
+      </>
+    );
+  }
+
+  const requests = requestsQuery.data ?? [];
+
   const stats = getDashboardStats(user, requests, {
     activeUserCount: users.filter((item) => item.active).length,
+
     businessUnitCount: businessUnits.length,
   });
 
@@ -56,6 +109,7 @@ export function DashboardPage() {
   const unit = businessUnits.find((item) => item.id === user.businessUnitId);
 
   const recent = requests.slice(0, 5);
+
   const totalRequests = requests.length;
 
   const totalAmount = requests.reduce((total, request) => total + request.amount, 0);
@@ -87,6 +141,7 @@ export function DashboardPage() {
 
           <p className="text-lg font-semibold text-foreground">
             {ROLE_LABELS[role]}
+
             {unit ? ` · ${unit.name}` : " · Seluruh Unit Bisnis"}
           </p>
 
@@ -177,15 +232,21 @@ export function DashboardPage() {
                 <div className="min-w-0">
                   <p className="truncate text-sm text-foreground">
                     <span className="num text-xs text-primary">{request.requestNumber}</span>
+
                     {" · "}
+
                     {request.title}
                   </p>
 
                   <p className="mt-0.5 text-xs text-muted-foreground">
                     {lastActivity ? ACTIVITY_LABELS[lastActivity.action] : "Belum ada aktivitas"}
+
                     {" · "}
+
                     {lastActivity?.actorName ?? "-"}
+
                     {" · "}
+
                     {formatRelatif(lastActivity?.createdAt ?? request.updatedAt)}
                   </p>
                 </div>

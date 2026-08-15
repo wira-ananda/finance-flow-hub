@@ -1,52 +1,55 @@
-import { useMemo, useState } from "react";
-import { useNavigate } from "@tanstack/react-router";
-import { Building2, FlaskConical, LogIn, ShieldCheck, Wallet } from "lucide-react";
+import { Building2, ShieldCheck, Wallet } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { ThemeSwitcher } from "@/components/layout/ThemeSwitcher";
-import { APP_NAME, APP_NAME_FULL, ROLE_LABELS } from "@/constants/status";
-import { useSession } from "@/providers/session-provider";
-import { getBusinessUnit, listActiveUsers } from "@/services/user.service";
+
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+
+import { APP_NAME, APP_NAME_FULL } from "@/constants/status";
+
+import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
 
 interface LoginPageProps {
   redirectTo?: string;
+
+  errorCode?: string;
 }
 
-export function LoginPage({ redirectTo }: LoginPageProps) {
-  const navigate = useNavigate();
-  const { login } = useSession();
+const LOGIN_ERROR_MESSAGES: Record<string, string> = {
+  GOOGLE_CREDENTIAL_MISSING: "Credential Google tidak diterima.",
 
-  const users = useMemo(() => listActiveUsers(), []);
+  GOOGLE_CSRF_FAILED: "Validasi keamanan login gagal. Silakan coba kembali.",
 
-  const [selectedUserId, setSelectedUserId] = useState(() => users[0]?.id ?? "");
+  GOOGLE_IDENTITY_INVALID: "Identitas Google tidak valid.",
 
-  const selectedUser = users.find((user) => user.id === selectedUserId);
+  GOOGLE_DOMAIN_NOT_ALLOWED: "Akun Google ini tidak termasuk domain perusahaan.",
 
-  const selectedUnit = getBusinessUnit(selectedUser?.businessUnitId ?? null);
+  ACCOUNT_NOT_REGISTERED: "Email Google Anda belum terdaftar di Finance Request System.",
 
-  const handleLogin = () => {
-    if (!selectedUser) return;
+  ACCOUNT_INACTIVE: "Akun Finance Request Anda sedang tidak aktif.",
 
-    login(selectedUser.id);
+  AUTH_CONFIGURATION_ERROR: "Konfigurasi Google Login belum lengkap.",
 
-    if (redirectTo && redirectTo.startsWith("/")) {
-      window.location.assign(redirectTo);
-      return;
-    }
+  GOOGLE_LOGIN_FAILED: "Login dengan Google gagal. Silakan coba kembali.",
+};
 
-    void navigate({
-      to: "/",
-      replace: true,
-    });
-  };
+function sanitizeRedirect(value?: string): string {
+  if (!value || !value.startsWith("/") || value.startsWith("//")) {
+    return "/";
+  }
+
+  return value;
+}
+
+export function LoginPage({ redirectTo, errorCode }: LoginPageProps) {
+  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID?.trim();
+
+  const loginUri = import.meta.env.VITE_GOOGLE_LOGIN_URI?.trim();
+
+  const configurationReady = Boolean(clientId && loginUri);
+
+  const errorMessage = errorCode
+    ? (LOGIN_ERROR_MESSAGES[errorCode] ?? "Login gagal. Silakan coba kembali.")
+    : null;
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-background">
@@ -63,6 +66,7 @@ export function LoginPage({ redirectTo }: LoginPageProps) {
 
           <div>
             <p className="text-sm font-semibold text-foreground">{APP_NAME}</p>
+
             <p className="text-[11px] text-muted-foreground">Finance Management</p>
           </div>
         </div>
@@ -89,7 +93,9 @@ export function LoginPage({ redirectTo }: LoginPageProps) {
           <div className="mt-10 grid grid-cols-2 gap-4">
             <div className="rounded-xl border border-border bg-card/70 p-4">
               <Building2 className="mb-3 size-5 text-primary" aria-hidden />
+
               <p className="text-sm font-medium text-foreground">Lintas Unit Bisnis</p>
+
               <p className="mt-1 text-xs leading-5 text-muted-foreground">
                 Setiap unit dapat mengelola dan memantau pengajuannya.
               </p>
@@ -97,9 +103,11 @@ export function LoginPage({ redirectTo }: LoginPageProps) {
 
             <div className="rounded-xl border border-border bg-card/70 p-4">
               <ShieldCheck className="mb-3 size-5 text-primary" aria-hidden />
+
               <p className="text-sm font-medium text-foreground">Akses Berbasis Role</p>
+
               <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                Hak akses menyesuaikan tanggung jawab setiap pengguna.
+                Role dan hak akses berasal dari akun pengguna terdaftar.
               </p>
             </div>
           </div>
@@ -108,107 +116,50 @@ export function LoginPage({ redirectTo }: LoginPageProps) {
         <Card className="border-border/80 shadow-sm">
           <CardHeader className="space-y-3 pb-5">
             <div className="flex size-11 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <LogIn className="size-5" aria-hidden />
+              <ShieldCheck className="size-5" aria-hidden />
             </div>
 
             <div>
               <CardTitle className="text-xl">Masuk ke Sistem</CardTitle>
 
               <CardDescription className="mt-1.5">
-                Gunakan akun pengujian untuk melanjutkan development.
+                Gunakan akun Google yang terdaftar pada Finance Request System.
               </CardDescription>
             </div>
           </CardHeader>
 
           <CardContent className="space-y-5">
-            <div className="rounded-lg border border-status-revision/25 bg-status-revision/8 p-3">
-              <div className="flex gap-2.5">
-                <FlaskConical className="mt-0.5 size-4 shrink-0 text-status-revision" aria-hidden />
-
-                <div>
-                  <p className="text-xs font-medium text-foreground">Mode Pengembangan</p>
-
-                  <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                    Authentication Google belum aktif. Pilih salah satu akun mock untuk menguji role
-                    aplikasi.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label htmlFor="mock-user" className="text-sm font-medium text-foreground">
-                Akun Pengujian
-              </label>
-
-              <Select value={selectedUserId} onValueChange={setSelectedUserId}>
-                <SelectTrigger id="mock-user" className="h-11 w-full">
-                  <SelectValue placeholder="Pilih pengguna" />
-                </SelectTrigger>
-
-                <SelectContent>
-                  {users.map((user) => (
-                    <SelectItem key={user.id} value={user.id} className="py-2">
-                      <span className="flex flex-col">
-                        <span className="text-sm font-medium">{user.name}</span>
-
-                        <span className="text-xs text-muted-foreground">
-                          {ROLE_LABELS[user.role]}
-                        </span>
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {selectedUser ? (
-              <div className="rounded-lg border border-border bg-muted/30 p-3.5">
-                <div className="flex items-start gap-3">
-                  <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-xs font-semibold text-primary">
-                    {selectedUser.initials}
-                  </span>
-
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-foreground">
-                      {selectedUser.name}
-                    </p>
-
-                    <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                      {selectedUser.email}
-                    </p>
-
-                    <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                      <span>{ROLE_LABELS[selectedUser.role]}</span>
-
-                      {selectedUnit ? <span>• {selectedUnit.name}</span> : null}
-                    </div>
-                  </div>
-                </div>
+            {errorMessage ? (
+              <div
+                role="alert"
+                className="rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive"
+              >
+                {errorMessage}
               </div>
             ) : null}
 
-            <Button
-              type="button"
-              className="h-11 w-full"
-              disabled={!selectedUser}
-              onClick={handleLogin}
-            >
-              <LogIn className="mr-2 size-4" aria-hidden />
-              Masuk sebagai Pengguna Uji
-            </Button>
+            {!configurationReady ? (
+              <div
+                role="alert"
+                className="rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive"
+              >
+                Konfigurasi Google Login belum lengkap.
+              </div>
+            ) : (
+              <GoogleSignInButton clientId={clientId} loginUri={loginUri} />
+            )}
 
             <div className="border-t border-border pt-4">
               <p className="text-center text-[11px] leading-5 text-muted-foreground">
-                Google Sign-In akan menggantikan mock login ketika integrasi production
-                authentication dilakukan.
+                Hanya akun Google dengan email yang terdaftar dan aktif pada Finance Request System
+                yang dapat masuk.
               </p>
             </div>
           </CardContent>
         </Card>
       </main>
 
-      <footer className="absolute bottom-4 left-0 right-0 hidden text-center text-[11px] text-muted-foreground lg:block">
+      <footer className="absolute right-0 bottom-4 left-0 hidden text-center text-[11px] text-muted-foreground lg:block">
         {APP_NAME_FULL}
       </footer>
     </div>

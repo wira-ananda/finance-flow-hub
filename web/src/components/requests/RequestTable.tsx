@@ -1,17 +1,30 @@
 import { useNavigate } from "@tanstack/react-router";
 
 import { DataTable, type DataTableColumn } from "@/components/common/DataTable";
+
 import { StatusBadge } from "@/components/common/StatusBadge";
+
 import { CATEGORY_LABELS } from "@/constants/status";
+
+import { useBusinessUnits } from "@/hooks/use-business-units";
+
+import { useUsers } from "@/hooks/use-users";
+
 import { formatRupiah, formatTanggal } from "@/lib/formatters";
+
 import { getBusinessUnitName, getLatestSubmittedAt, getUserName } from "@/services/request.service";
+
 import type { FinanceRequest } from "@/types";
 
 interface RequestTableProps {
   requests: FinanceRequest[];
+
   showUnit?: boolean;
+
   showRequester?: boolean;
+
   emptyTitle?: string;
+
   emptyDescription?: string;
 }
 
@@ -24,10 +37,16 @@ export function RequestTable({
 }: RequestTableProps) {
   const navigate = useNavigate();
 
+  const users = useUsers();
+
+  const units = useBusinessUnits();
+
   const columns: DataTableColumn<FinanceRequest>[] = [
     {
       key: "number",
+
       header: "Pengajuan",
+
       render: (row) => (
         <div className="min-w-0">
           <p className="num text-xs font-medium text-primary">{row.requestNumber}</p>
@@ -43,10 +62,12 @@ export function RequestTable({
       ? [
           {
             key: "unit",
+
             header: "Unit Bisnis",
+
             render: (row: FinanceRequest) => (
               <span className="text-sm text-muted-foreground">
-                {getBusinessUnitName(row.businessUnitId)}
+                {getBusinessUnitName(row.businessUnitId, units)}
               </span>
             ),
           } satisfies DataTableColumn<FinanceRequest>,
@@ -57,9 +78,13 @@ export function RequestTable({
       ? [
           {
             key: "requester",
+
             header: "Pemohon",
+
             render: (row: FinanceRequest) => (
-              <span className="text-sm text-muted-foreground">{getUserName(row.requesterId)}</span>
+              <span className="text-sm text-muted-foreground">
+                {getUserName(row.requesterId, users)}
+              </span>
             ),
           } satisfies DataTableColumn<FinanceRequest>,
         ]
@@ -67,7 +92,9 @@ export function RequestTable({
 
     {
       key: "category",
+
       header: "Kategori",
+
       render: (row) => (
         <span className="text-sm text-muted-foreground">{CATEGORY_LABELS[row.category]}</span>
       ),
@@ -75,8 +102,11 @@ export function RequestTable({
 
     {
       key: "amount",
+
       header: "Nominal",
+
       align: "right",
+
       render: (row) => (
         <span className="num whitespace-nowrap text-sm font-medium text-foreground">
           {formatRupiah(row.amount)}
@@ -86,7 +116,9 @@ export function RequestTable({
 
     {
       key: "date",
+
       header: "Tanggal",
+
       render: (row) => (
         <span className="whitespace-nowrap text-sm text-muted-foreground">
           {formatTanggal(getLatestSubmittedAt(row) ?? row.createdAt)}
@@ -96,7 +128,9 @@ export function RequestTable({
 
     {
       key: "needed",
+
       header: "Dibutuhkan",
+
       render: (row) => (
         <span className="whitespace-nowrap text-sm text-muted-foreground">
           {formatTanggal(row.neededAt)}
@@ -106,7 +140,9 @@ export function RequestTable({
 
     {
       key: "status",
+
       header: "Status",
+
       render: (row) => <StatusBadge status={row.status} />,
     },
   ];
@@ -119,6 +155,7 @@ export function RequestTable({
       onRowClick={(row) =>
         navigate({
           to: "/pengajuan/$id",
+
           params: {
             id: row.id,
           },

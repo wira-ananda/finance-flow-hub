@@ -1,4 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+
 import {
   HeadContent,
   Link,
@@ -9,14 +10,19 @@ import {
   useRouter,
   useRouterState,
 } from "@tanstack/react-router";
+
 import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 
 import { AppShell } from "@/components/layout/AppShell";
+
 import { reportLovableError } from "@/lib/lovable-error-reporting";
+
 import { canAccessPath } from "@/lib/route-access";
+
 import { SessionProvider, useSession } from "@/providers/session-provider";
+
 import { THEME_INIT_SCRIPT, ThemeProvider } from "@/providers/theme-provider";
 
 function NotFoundComponent() {

@@ -1,10 +1,11 @@
-import { QueryClient } from "@tanstack/react-query";
 import { createRouter } from "@tanstack/react-router";
+
+import { createFinanceQueryClient } from "@/lib/api/query-client";
 
 import { routeTree } from "./routeTree.gen";
 
 export const getRouter = () => {
-  const queryClient = new QueryClient();
+  const queryClient = createFinanceQueryClient();
 
   const router = createRouter({
     routeTree,
@@ -14,6 +15,7 @@ export const getRouter = () => {
     },
 
     scrollRestoration: true,
+
     defaultPreloadStaleTime: 0,
   });
 

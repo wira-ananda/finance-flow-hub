@@ -15,7 +15,7 @@ import { useBusinessUnits } from "@/hooks/use-business-units";
 import { getBreadcrumbItems } from "@/lib/navigation";
 import { navItemsForRole } from "@/lib/permissions";
 import { useSession } from "@/providers/session-provider";
-import { RoleSwitcher } from "./RoleSwitcher";
+
 import { ThemeSwitcher } from "./ThemeSwitcher";
 
 export function AppHeader({ onOpenMobileNav }: { onOpenMobileNav: () => void }) {
@@ -69,10 +69,6 @@ export function AppHeader({ onOpenMobileNav }: { onOpenMobileNav: () => void }) 
         </ol>
       </nav>
 
-      <div className="hidden md:block">
-        <RoleSwitcher />
-      </div>
-
       <button
         type="button"
         disabled
@@ -119,20 +115,6 @@ export function AppHeader({ onOpenMobileNav }: { onOpenMobileNav: () => void }) 
             <ThemeSwitcher variant="full" />
           </div>
 
-          {import.meta.env.DEV ? (
-            <>
-              <DropdownMenuSeparator />
-
-              <div className="px-2 py-2 md:hidden">
-                <p className="pb-1.5 text-xs font-medium text-muted-foreground">
-                  Role Pengembangan
-                </p>
-
-                <RoleSwitcher variant="full" />
-              </div>
-            </>
-          ) : null}
-
           {role === "ADMIN" ? (
             <>
               <DropdownMenuSeparator />
@@ -146,7 +128,9 @@ export function AppHeader({ onOpenMobileNav }: { onOpenMobileNav: () => void }) 
           <DropdownMenuSeparator />
 
           <DropdownMenuItem
-            onSelect={() => logout()}
+            onSelect={() => {
+              void logout();
+            }}
             className="text-destructive focus:text-destructive"
           >
             <LogOut className="mr-2 size-4" aria-hidden />

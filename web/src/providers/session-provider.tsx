@@ -1,151 +1,69 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import type { ReactNode } from "react";
+import { createContext, useCallback, useContext, useMemo, type ReactNode } from "react";
 
-import { useUsers } from "@/hooks/use-users";
-import { getUserById, getUserForRole } from "@/services/user.service";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+
+import { financeQueryKeys } from "@/lib/api/query-keys";
+
+import { getCurrentSessionUserFn, logoutFn } from "@/lib/auth/auth.functions";
+
 import type { User, UserRole } from "@/types";
-
-const USER_STORAGE_KEY = "frms-dev-user-id";
-
-const LEGACY_ROLE_STORAGE_KEY = "frms-dev-role";
-
-const USER_ROLES: UserRole[] = ["UNIT_USER", "FINANCE_REVIEWER", "FINANCE_PAYMENT", "ADMIN"];
 
 interface SessionContextValue {
   user: User | null;
+
   role: UserRole | null;
+
   isAuthenticated: boolean;
+
   isHydrated: boolean;
-  login: (userId: string) => void;
-  logout: () => void;
-  setRole: (role: UserRole) => void;
+
+  logout: () => Promise<void>;
 }
 
 const SessionContext = createContext<SessionContextValue | null>(null);
 
-function isUserRole(value: string | null): value is UserRole {
-  if (!value) {
-    return false;
-  }
-
-  return USER_ROLES.includes(value as UserRole);
-}
-
 export function SessionProvider({ children }: { children: ReactNode }) {
-  const users = useUsers();
+  const queryClient = useQueryClient();
 
-  const [userId, setUserId] = useState<string | null>(null);
+  const sessionQuery = useQuery({
+    queryKey: financeQueryKeys.session.current,
 
-  const [isHydrated, setIsHydrated] = useState(false);
+    queryFn: () => getCurrentSessionUserFn(),
 
-  /*
-   * Memulihkan mock session dari localStorage setelah
-   * aplikasi berjalan di browser.
-   */
-  useEffect(() => {
-    const storedUserId = window.localStorage.getItem(USER_STORAGE_KEY);
+    staleTime: 5 * 60 * 1000,
 
-    if (storedUserId) {
-      const storedUser = getUserById(storedUserId);
+    retry: false,
 
-      if (storedUser?.active) {
-        setUserId(storedUser.id);
+    refetchOnWindowFocus: false,
+  });
 
-        setIsHydrated(true);
-        return;
-      }
+  const user = sessionQuery.data ?? null;
 
-      window.localStorage.removeItem(USER_STORAGE_KEY);
-    }
+  const logout = useCallback(async () => {
+    await logoutFn();
 
-    const legacyRole = window.localStorage.getItem(LEGACY_ROLE_STORAGE_KEY);
+    queryClient.clear();
 
-    if (isUserRole(legacyRole)) {
-      try {
-        const migratedUser = getUserForRole(legacyRole);
-
-        setUserId(migratedUser.id);
-
-        window.localStorage.setItem(USER_STORAGE_KEY, migratedUser.id);
-      } catch {
-        window.localStorage.removeItem(USER_STORAGE_KEY);
-      }
-
-      window.localStorage.removeItem(LEGACY_ROLE_STORAGE_KEY);
-    }
-
-    setIsHydrated(true);
-  }, []);
-
-  const user = useMemo(() => {
-    if (!userId) {
-      return null;
-    }
-
-    return users.find((item) => item.id === userId && item.active) ?? null;
-  }, [userId, users]);
-
-  /*
-   * Membersihkan session browser ketika user aktif
-   * sudah tidak tersedia pada repository.
-   */
-  useEffect(() => {
-    if (!isHydrated || !userId || user) {
-      return;
-    }
-
-    setUserId(null);
-
-    window.localStorage.removeItem(USER_STORAGE_KEY);
-  }, [isHydrated, userId, user]);
-
-  const login = useCallback(
-    (nextUserId: string) => {
-      const nextUser = users.find((item) => item.id === nextUserId);
-
-      if (!nextUser) {
-        throw new Error("Pengguna mock tidak ditemukan.");
-      }
-
-      if (!nextUser.active) {
-        throw new Error("Pengguna mock sedang tidak aktif.");
-      }
-
-      setUserId(nextUser.id);
-
-      window.localStorage.setItem(USER_STORAGE_KEY, nextUser.id);
-    },
-    [users],
-  );
-
-  const logout = useCallback(() => {
-    setUserId(null);
-
-    window.localStorage.removeItem(USER_STORAGE_KEY);
-
-    window.localStorage.removeItem(LEGACY_ROLE_STORAGE_KEY);
-  }, []);
-
-  const setRole = useCallback(
-    (nextRole: UserRole) => {
-      const nextUser = getUserForRole(nextRole);
-
-      login(nextUser.id);
-    },
-    [login],
-  );
+    /*
+     * Full navigation sengaja dilakukan pada auth boundary
+     * supaya seluruh memory/cache user sebelumnya benar-benar hilang.
+     */
+    window.location.assign("/login");
+  }, [queryClient]);
 
   const value = useMemo<SessionContextValue>(
     () => ({
       user,
+
       role: user?.role ?? null,
+
       isAuthenticated: Boolean(user),
-      isHydrated,
-      login,
+
+      isHydrated: !sessionQuery.isPending,
+
       logout,
-      setRole,
     }),
-    [user, isHydrated, login, logout, setRole],
+    [user, sessionQuery.isPending, logout],
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

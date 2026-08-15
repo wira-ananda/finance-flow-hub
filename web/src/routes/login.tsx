@@ -4,11 +4,23 @@ import { LoginPage } from "@/pages/LoginPage";
 
 interface LoginSearch {
   redirect?: string;
+
+  error?: string;
 }
 
 export const Route = createFileRoute("/login")({
   validateSearch: (search: Record<string, unknown>): LoginSearch => ({
-    redirect: typeof search.redirect === "string" ? search.redirect : undefined,
+    ...(typeof search.redirect === "string"
+      ? {
+          redirect: search.redirect,
+        }
+      : {}),
+
+    ...(typeof search.error === "string"
+      ? {
+          error: search.error,
+        }
+      : {}),
   }),
 
   head: () => ({
@@ -16,8 +28,10 @@ export const Route = createFileRoute("/login")({
       {
         title: "Masuk | Finance Request Management System",
       },
+
       {
         name: "description",
+
         content: "Masuk ke Finance Request Management System.",
       },
     ],
@@ -27,7 +41,7 @@ export const Route = createFileRoute("/login")({
 });
 
 function LoginRoute() {
-  const { redirect } = Route.useSearch();
+  const { redirect, error } = Route.useSearch();
 
-  return <LoginPage redirectTo={redirect} />;
+  return <LoginPage redirectTo={redirect} errorCode={error} />;
 }

@@ -1,27 +1,40 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
+
 import { useNavigate } from "@tanstack/react-router";
 
 import type { FileUploadItem } from "@/components/common/FileUpload";
-import { getLatestActivityNote } from "@/services/request.service";
+
+import { useBusinessUnits } from "@/hooks/use-business-units";
+
 import {
-  createAndSubmitRequest,
-  saveDraftRequest,
-  submitRequest,
-  updateRequest,
-  type CreateRequestInput,
-} from "@/services/request-write.service";
-import { getBusinessUnit } from "@/services/user.service";
+  useCreateRequestMutation,
+  useSubmitRequestMutation,
+  useUpdateRequestMutation,
+} from "@/hooks/use-requests";
+
+import { getLatestActivityNote } from "@/services/request.service";
+
+import type { CreateRequestInput } from "@/services/request-write.service";
+
 import type { FinanceRequest, RequestCategory, User } from "@/types";
 
 export interface RequestFormValues {
   title: string;
+
   category: RequestCategory;
+
   amount: string;
+
   description: string;
+
   neededAt: string;
+
   beneficiaryName: string;
+
   beneficiaryBank: string;
+
   beneficiaryAccount: string;
+
   attachments: FileUploadItem[];
 }
 
@@ -43,21 +56,33 @@ export type RequestFormFieldSetter = <K extends keyof RequestFormValues>(
 function createInitialValues(request?: FinanceRequest): RequestFormValues {
   return {
     title: request?.title ?? "",
+
     category: request?.category ?? "OPERASIONAL",
+
     amount: request ? String(request.amount) : "",
+
     description: request?.description ?? "",
+
     neededAt: request?.neededAt.slice(0, 10) ?? "",
+
     beneficiaryName: request?.beneficiaryName ?? "",
+
     beneficiaryBank: request?.beneficiaryBank ?? "",
+
     beneficiaryAccount: request?.beneficiaryAccount ?? "",
+
     attachments:
       request?.documents
         .filter((document) => document.type === "LAMPIRAN")
         .map((document) => ({
           id: document.id,
+
           name: document.name,
+
           sizeKb: document.sizeKb,
+
           uploadedAt: document.uploadedAt,
+
           uploadedBy: document.uploadedBy,
         })) ?? [],
   };
@@ -65,6 +90,14 @@ function createInitialValues(request?: FinanceRequest): RequestFormValues {
 
 export function useRequestForm(user: User, initialRequest?: FinanceRequest) {
   const navigate = useNavigate();
+
+  const businessUnits = useBusinessUnits();
+
+  const createMutation = useCreateRequestMutation(user);
+
+  const updateMutation = useUpdateRequestMutation(user);
+
+  const submitMutation = useSubmitRequestMutation(user);
 
   const [values, setValues] = useState<RequestFormValues>(() =>
     createInitialValues(initialRequest),
@@ -74,19 +107,21 @@ export function useRequestForm(user: User, initialRequest?: FinanceRequest) {
 
   const [submitDialogOpen, setSubmitDialogOpen] = useState(false);
 
-  const [isSaving, setIsSaving] = useState(false);
-
   const [actionError, setActionError] = useState<string | null>(null);
 
-  const numericAmount = useMemo(() => Number(values.amount.replace(/\D/g, "")), [values.amount]);
+  const numericAmount = Number(values.amount.replace(/\D/g, ""));
 
-  const unit = getBusinessUnit(user.businessUnitId);
+  const unit = businessUnits.find((item) => item.id === user.businessUnitId);
+
   const isEditMode = Boolean(initialRequest);
+
   const isRevision = initialRequest?.status === "REVISION_REQUIRED";
 
   const revisionNote = initialRequest
     ? getLatestActivityNote(initialRequest, "REVISION_REQUESTED")
     : null;
+
+  const isSaving = createMutation.isPending || updateMutation.isPending || submitMutation.isPending;
 
   const setField: RequestFormFieldSetter = (field, value) => {
     setValues((current) => ({
@@ -145,47 +180,85 @@ export function useRequestForm(user: User, initialRequest?: FinanceRequest) {
 
   const getInput = (): CreateRequestInput => ({
     title: values.title,
+
     description: values.description,
+
     category: values.category,
+
     amount: numericAmount,
+
     neededAt: values.neededAt,
+
     beneficiaryName: values.beneficiaryName,
+
     beneficiaryBank: values.beneficiaryBank,
+
     beneficiaryAccount: values.beneficiaryAccount,
+
+    // File binary belum dikirim pada 7D. Metadata dipertahankan agar
+    // attachment existing tetap dapat ditampilkan saat edit.
     attachments: values.attachments.map((file) => ({
-      id: file.id,
+      ...(file.id
+        ? {
+            id: file.id,
+          }
+        : {}),
+
       name: file.name,
+
       sizeKb: file.sizeKb,
-      uploadedAt: file.uploadedAt,
-      uploadedBy: file.uploadedBy,
+
+      ...(file.uploadedAt
+        ? {
+            uploadedAt: file.uploadedAt,
+          }
+        : {}),
+
+      ...(file.uploadedBy
+        ? {
+            uploadedBy: file.uploadedBy,
+          }
+        : {}),
     })),
   });
 
-  const goToRequest = (requestId: string) => {
-    void navigate({
+  const goToRequest = async (requestId: string) => {
+    await navigate({
       to: "/pengajuan/$id",
-      params: { id: requestId },
+
+      params: {
+        id: requestId,
+      },
     });
   };
 
-  const handleSaveDraft = () => {
+  const handleSaveDraft = async (): Promise<boolean> => {
     if (isSaving || !validateDraft()) {
-      return;
+      return false;
     }
 
     setActionError(null);
-    setIsSaving(true);
 
     try {
       const request = initialRequest
-        ? updateRequest(user, initialRequest.id, getInput())
-        : saveDraftRequest(user, getInput());
+        ? await updateMutation.mutateAsync({
+            requestId: initialRequest.id,
 
-      goToRequest(request.id);
+            input: getInput(),
+          })
+        : await createMutation.mutateAsync({
+            input: getInput(),
+
+            submitNow: false,
+          });
+
+      await goToRequest(request.id);
+
+      return true;
     } catch (error) {
       setActionError(error instanceof Error ? error.message : "Gagal menyimpan pengajuan.");
-    } finally {
-      setIsSaving(false);
+
+      return false;
     }
   };
 
@@ -195,36 +268,45 @@ export function useRequestForm(user: User, initialRequest?: FinanceRequest) {
     }
 
     setActionError(null);
+
     setSubmitDialogOpen(true);
   };
 
-  const handleSubmit = (): boolean => {
+  const handleSubmit = async (): Promise<boolean> => {
     if (isSaving) {
       return false;
     }
 
     setActionError(null);
-    setIsSaving(true);
 
     try {
       let request: FinanceRequest;
 
       if (initialRequest) {
-        updateRequest(user, initialRequest.id, getInput());
+        await updateMutation.mutateAsync({
+          requestId: initialRequest.id,
 
-        request = submitRequest(user, initialRequest.id);
+          input: getInput(),
+
+          refresh: false,
+        });
+
+        request = await submitMutation.mutateAsync(initialRequest.id);
       } else {
-        request = createAndSubmitRequest(user, getInput());
+        request = await createMutation.mutateAsync({
+          input: getInput(),
+
+          submitNow: true,
+        });
       }
 
-      goToRequest(request.id);
+      await goToRequest(request.id);
+
       return true;
     } catch (error) {
       setActionError(error instanceof Error ? error.message : "Gagal mengajukan pengajuan.");
 
       return false;
-    } finally {
-      setIsSaving(false);
     }
   };
 

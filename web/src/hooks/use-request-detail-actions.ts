@@ -1,182 +1,95 @@
 import { useState } from "react";
 
-import type { RequestAction } from "@/lib/permissions";
-import { processPayment } from "@/services/payment.service";
-import type { ProcessPaymentInput } from "@/services/payment.service";
-import {
-  approveRequest,
-  rejectRequest,
-  requestRevision,
-  startReview,
-} from "@/services/review.service";
-import { submitRequest } from "@/services/request-write.service";
-import type { FinanceRequest, User } from "@/types";
+import { useNavigate } from "@tanstack/react-router";
 
-export type ReviewDialogType = "revision" | "reject";
+import { useSubmitRequestMutation } from "@/hooks/use-requests";
+
+import type { RequestAction } from "@/lib/permissions";
+
+import type { FinanceRequest, User } from "@/types";
 
 interface UseRequestDetailActionsOptions {
   user: User | null;
+
   request: FinanceRequest | undefined;
 }
 
+/**
+ * Aksi detail yang sudah terhubung sampai Step 7D.
+ * Review dan pembayaran sengaja tidak berada di hook ini sampai Step 7E/7G.
+ */
 export function useRequestDetailActions({ user, request }: UseRequestDetailActionsOptions) {
+  const navigate = useNavigate();
+
   const [pendingAction, setPendingAction] = useState<RequestAction | null>(null);
-
-  const [reviewDialog, setReviewDialog] = useState<ReviewDialogType | null>(null);
-
-  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
 
   const [actionError, setActionError] = useState<string | null>(null);
 
-  const [isProcessing, setIsProcessing] = useState(false);
+  const submitMutation = useSubmitRequestMutation(user);
 
   const handleAction = (action: RequestAction) => {
-    if (!request) return;
+    if (!request) {
+      return;
+    }
 
     setActionError(null);
 
     if (action === "EDIT") {
-      window.location.assign(`/pengajuan/baru?edit=${request.id}`);
+      void navigate({
+        to: "/pengajuan/baru",
+
+        search: {
+          edit: request.id,
+        },
+      });
+
       return;
     }
 
-    if (action === "REQUEST_REVISION") {
-      setReviewDialog("revision");
-      return;
+    if (action === "SUBMIT") {
+      setPendingAction(action);
     }
-
-    if (action === "REJECT") {
-      setReviewDialog("reject");
-      return;
-    }
-
-    if (action === "PROCESS_PAYMENT") {
-      setPaymentDialogOpen(true);
-      return;
-    }
-
-    setPendingAction(action);
   };
 
-  const handleConfirmAction = (): boolean => {
-    if (!user || !request || !pendingAction || isProcessing) {
+  const handleConfirmAction = async (): Promise<boolean> => {
+    if (!request || pendingAction !== "SUBMIT" || submitMutation.isPending) {
       return false;
     }
 
     setActionError(null);
-    setIsProcessing(true);
 
     try {
-      switch (pendingAction) {
-        case "SUBMIT":
-          submitRequest(user, request.id);
-          break;
-
-        case "START_REVIEW":
-          startReview(user, request.id);
-          break;
-
-        case "APPROVE":
-          approveRequest(user, request.id);
-          break;
-
-        default:
-          return false;
-      }
+      await submitMutation.mutateAsync(request.id);
 
       setPendingAction(null);
-      return true;
-    } catch (error) {
-      setActionError(error instanceof Error ? error.message : "Aksi gagal diproses.");
-
-      return false;
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const handleReviewDecision = (note: string): boolean => {
-    if (!user || !request || !reviewDialog) {
-      return false;
-    }
-
-    setActionError(null);
-    setIsProcessing(true);
-
-    try {
-      if (reviewDialog === "revision") {
-        requestRevision(user, request.id, note);
-      } else {
-        rejectRequest(user, request.id, note);
-      }
 
       return true;
     } catch (error) {
-      setActionError(error instanceof Error ? error.message : "Keputusan review gagal diproses.");
+      setActionError(error instanceof Error ? error.message : "Pengajuan gagal diajukan.");
 
       return false;
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const handlePayment = (input: ProcessPaymentInput): boolean => {
-    if (!user || !request) {
-      return false;
-    }
-
-    setActionError(null);
-    setIsProcessing(true);
-
-    try {
-      processPayment(user, request.id, input);
-      setPaymentDialogOpen(false);
-
-      return true;
-    } catch (error) {
-      setActionError(error instanceof Error ? error.message : "Pembayaran gagal diproses.");
-
-      return false;
-    } finally {
-      setIsProcessing(false);
     }
   };
 
   const getActionDescription = (action: RequestAction): string => {
-    if (!request) {
+    if (!request || action !== "SUBMIT") {
       return "";
     }
 
-    switch (action) {
-      case "SUBMIT":
-        return request.status === "REVISION_REQUIRED"
-          ? "Pengajuan akan diajukan ulang dan kembali masuk ke antrean review Finance."
-          : "Pengajuan akan dikirim ke Finance untuk direview.";
-
-      case "START_REVIEW":
-        return "Status pengajuan akan berubah menjadi Sedang Direview.";
-
-      case "APPROVE":
-        return "Pengajuan akan disetujui dan Surat Persetujuan akan dibuat secara otomatis.";
-
-      default:
-        return "Konfirmasi aksi pada pengajuan ini.";
-    }
+    return request.status === "REVISION_REQUIRED"
+      ? "Pengajuan akan diajukan ulang dan kembali masuk ke antrean review Finance."
+      : "Pengajuan akan dikirim ke Finance untuk direview.";
   };
 
   return {
     pendingAction,
     setPendingAction,
-    reviewDialog,
-    setReviewDialog,
-    paymentDialogOpen,
-    setPaymentDialogOpen,
     actionError,
-    isProcessing,
+
+    isProcessing: submitMutation.isPending,
+
     handleAction,
     handleConfirmAction,
-    handleReviewDecision,
-    handlePayment,
     getActionDescription,
   };
 }

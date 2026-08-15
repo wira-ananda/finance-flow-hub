@@ -1,33 +1,31 @@
-import { Link, useRouterState } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 
 import { EmptyState } from "@/components/common/EmptyState";
+
+import { ErrorState } from "@/components/common/ErrorState";
+
+import { LoadingState } from "@/components/common/LoadingState";
+
 import { PageHeader } from "@/components/common/PageHeader";
+
 import { RequestForm } from "@/components/requests/form/RequestForm";
+
 import { Button } from "@/components/ui/button";
-import { useRequest } from "@/hooks/use-requests";
+
+import { useRequestQuery } from "@/hooks/use-requests";
+
 import { canPerform } from "@/lib/permissions";
+
 import { useSession } from "@/providers/session-provider";
 
-function getEditRequestId(search: unknown): string | null {
-  if (typeof search !== "object" || search === null) {
-    return null;
-  }
-
-  const edit = (search as Record<string, unknown>).edit;
-
-  return typeof edit === "string" ? edit : null;
+interface CreateRequestPageProps {
+  editRequestId: string | null;
 }
 
-export function CreateRequestPage() {
+export function CreateRequestPage({ editRequestId }: CreateRequestPageProps) {
   const { user } = useSession();
 
-  const search = useRouterState({
-    select: (state) => state.location.search,
-  });
-
-  const editRequestId = getEditRequestId(search);
-
-  const requestToEdit = useRequest(user, editRequestId);
+  const requestQuery = useRequestQuery(user, editRequestId);
 
   if (!user) {
     return null;
@@ -50,6 +48,34 @@ export function CreateRequestPage() {
       </>
     );
   }
+
+  if (editRequestId && requestQuery.isPending) {
+    return (
+      <>
+        <PageHeader title="Ubah Pengajuan" />
+
+        <LoadingState rows={7} />
+      </>
+    );
+  }
+
+  if (editRequestId && requestQuery.isError) {
+    return (
+      <>
+        <PageHeader title="Ubah Pengajuan" />
+
+        <ErrorState
+          title="Pengajuan gagal dimuat"
+          description={requestQuery.error.message}
+          onRetry={() => {
+            void requestQuery.refetch();
+          }}
+        />
+      </>
+    );
+  }
+
+  const requestToEdit = editRequestId ? requestQuery.data : undefined;
 
   if (editRequestId && !requestToEdit) {
     return (
@@ -91,7 +117,11 @@ export function CreateRequestPage() {
     <RequestForm
       key={requestToEdit?.id ?? "new-request"}
       user={user}
-      initialRequest={requestToEdit}
+      {...(requestToEdit
+        ? {
+            initialRequest: requestToEdit,
+          }
+        : {})}
     />
   );
 }

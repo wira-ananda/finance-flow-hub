@@ -1,13 +1,25 @@
 import { Link } from "@tanstack/react-router";
+
 import { History, RotateCcw } from "lucide-react";
+
 import { useState } from "react";
 
 import { EmptyState } from "@/components/common/EmptyState";
+
+import { ErrorState } from "@/components/common/ErrorState";
+
+import { LoadingState } from "@/components/common/LoadingState";
+
 import { PageHeader } from "@/components/common/PageHeader";
+
 import { StatCard } from "@/components/common/StatCard";
+
 import { RequestTable } from "@/components/requests/RequestTable";
+
 import { Button } from "@/components/ui/button";
+
 import { Input } from "@/components/ui/input";
+
 import {
   Select,
   SelectContent,
@@ -15,11 +27,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+
 import { STATUS_LABELS } from "@/constants/status";
+
 import { useBusinessUnits } from "@/hooks/use-business-units";
-import { useRequests } from "@/hooks/use-requests";
+
+import { useRequestsQuery } from "@/hooks/use-requests";
+
 import { useSession } from "@/providers/session-provider";
+
 import { getDashboardStats } from "@/services/request.service";
+
 import type { RequestStatus } from "@/types";
 
 const REVIEW_QUEUE_STATUSES = ["SUBMITTED", "UNDER_REVIEW", "REVISION_REQUIRED"] as const;
@@ -31,13 +49,18 @@ const QUEUE_STATUS_OPTIONS: QueueStatus[] = ["ALL", ...REVIEW_QUEUE_STATUSES];
 export function ReviewQueuePage() {
   const { user } = useSession();
 
-  const requests = useRequests(user);
+  const requestsQuery = useRequestsQuery(user);
+
   const units = useBusinessUnits();
 
   const [query, setQuery] = useState("");
+
   const [status, setStatus] = useState<QueueStatus>("ALL");
+
   const [businessUnitId, setBusinessUnitId] = useState("ALL");
+
   const [dateFrom, setDateFrom] = useState("");
+
   const [dateTo, setDateTo] = useState("");
 
   if (!user) {
@@ -61,6 +84,34 @@ export function ReviewQueuePage() {
       </>
     );
   }
+
+  if (requestsQuery.isPending) {
+    return (
+      <>
+        <PageHeader title="Antrean Review" />
+
+        <LoadingState rows={7} />
+      </>
+    );
+  }
+
+  if (requestsQuery.isError) {
+    return (
+      <>
+        <PageHeader title="Antrean Review" />
+
+        <ErrorState
+          title="Antrean review gagal dimuat"
+          description={requestsQuery.error.message}
+          onRetry={() => {
+            void requestsQuery.refetch();
+          }}
+        />
+      </>
+    );
+  }
+
+  const requests = requestsQuery.data ?? [];
 
   const stats = getDashboardStats(user, requests);
 

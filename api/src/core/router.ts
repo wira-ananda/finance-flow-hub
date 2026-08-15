@@ -14,6 +14,8 @@ function handleRequest(
 
     console.log(`[API] ${request.method} ${request.action}`);
 
+    assertTrustedServerRequest(request);
+
     return routeRequest(request);
   } catch (error) {
     const message =
@@ -402,4 +404,16 @@ function handleSchemaValidation(): GoogleAppsScript.Content.TextOutput {
   }
 
   return successResponse(result, "Schema database valid.");
+}
+
+function assertTrustedServerRequest(request: ParsedApiRequest): void {
+  const providedKey = String(
+    request.query.serverKey ?? request.body.serverKey ?? "",
+  ).trim();
+
+  const expectedKey = getRequiredScriptProperty("API_SERVER_KEY");
+
+  if (!providedKey || providedKey !== expectedKey) {
+    throw createDomainError("Request API tidak terotorisasi.", "UNAUTHORIZED");
+  }
 }

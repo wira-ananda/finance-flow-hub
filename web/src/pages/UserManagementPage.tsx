@@ -1,36 +1,43 @@
 import { Pencil, Plus, Power, PowerOff } from "lucide-react";
+
 import { useMemo, useState } from "react";
 
-import { ConfirmationDialog } from "@/components/common/ConfirmationDialog";
 import { DataTable, type DataTableColumn } from "@/components/common/DataTable";
+
 import { EmptyState } from "@/components/common/EmptyState";
+
+import { ErrorState } from "@/components/common/ErrorState";
+
+import { LoadingState } from "@/components/common/LoadingState";
+
 import { PageHeader } from "@/components/common/PageHeader";
-import { UserDialog } from "@/components/admin/UserDialog";
+
 import { Button } from "@/components/ui/button";
+
 import { Input } from "@/components/ui/input";
+
 import { ROLE_LABELS } from "@/constants/status";
-import { useBusinessUnits } from "@/hooks/use-business-units";
-import { useUsers } from "@/hooks/use-users";
+
+import { useBusinessUnitsQuery } from "@/hooks/use-business-units";
+
+import { useUsersQuery } from "@/hooks/use-users";
+
 import { useSession } from "@/providers/session-provider";
-import { createUser, setUserActive, updateUser, type UserInput } from "@/services/user.service";
+
 import type { User } from "@/types";
 
 export function UserManagementPage() {
   const { user: currentUser } = useSession();
 
-  const users = useUsers();
+  const usersQuery = useUsersQuery();
 
-  const units = useBusinessUnits();
+  const unitsQuery = useBusinessUnitsQuery();
 
   const [query, setQuery] = useState("");
 
-  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const users = usersQuery.data ?? [];
 
-  const [createOpen, setCreateOpen] = useState(false);
-
-  const [pendingStatusUser, setPendingStatusUser] = useState<User | null>(null);
-
-  const [pageError, setPageError] = useState<string | null>(null);
+  const units = unitsQuery.data ?? [];
 
   const filteredUsers = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -63,26 +70,39 @@ export function UserManagementPage() {
     );
   }
 
+  if (usersQuery.isPending || unitsQuery.isPending) {
+    return (
+      <>
+        <PageHeader
+          title="Kelola Pengguna"
+          description="Data pengguna dibaca langsung dari Finance API."
+        />
+
+        <LoadingState rows={6} />
+      </>
+    );
+  }
+
+  const loadError = usersQuery.error ?? unitsQuery.error;
+
+  if (loadError) {
+    return (
+      <>
+        <PageHeader title="Kelola Pengguna" />
+
+        <ErrorState
+          title="Pengguna gagal dimuat"
+          description={loadError.message}
+          onRetry={() => {
+            void Promise.all([usersQuery.refetch(), unitsQuery.refetch()]);
+          }}
+        />
+      </>
+    );
+  }
+
   const getUnitName = (businessUnitId: string | null) =>
     units.find((unit) => unit.id === businessUnitId)?.name ?? "Seluruh Unit";
-
-  const handleSave = (input: UserInput, target?: User): boolean => {
-    setPageError(null);
-
-    try {
-      if (target) {
-        updateUser(currentUser, target.id, input);
-      } else {
-        createUser(currentUser, input);
-      }
-
-      return true;
-    } catch (error) {
-      setPageError(error instanceof Error ? error.message : "Gagal menyimpan pengguna.");
-
-      return false;
-    }
-  };
 
   const columns: DataTableColumn<User>[] = [
     {
@@ -96,11 +116,13 @@ export function UserManagementPage() {
         </div>
       ),
     },
+
     {
       key: "role",
       header: "Role",
       render: (row) => ROLE_LABELS[row.role],
     },
+
     {
       key: "unit",
       header: "Unit Bisnis",
@@ -108,11 +130,13 @@ export function UserManagementPage() {
         <span className="text-muted-foreground">{getUnitName(row.businessUnitId)}</span>
       ),
     },
+
     {
       key: "title",
       header: "Jabatan",
       render: (row) => <span className="text-muted-foreground">{row.jobTitle}</span>,
     },
+
     {
       key: "status",
       header: "Status",
@@ -128,13 +152,20 @@ export function UserManagementPage() {
         </span>
       ),
     },
+
     {
       key: "actions",
       header: "Aksi",
       align: "right",
       render: (row) => (
         <div className="flex justify-end gap-1">
-          <Button type="button" variant="ghost" size="sm" onClick={() => setEditingUser(row)}>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            disabled
+            title="Endpoint perubahan pengguna belum tersedia di backend."
+          >
             <Pencil className="size-3.5" aria-hidden />
             Edit
           </Button>
@@ -143,8 +174,8 @@ export function UserManagementPage() {
             type="button"
             variant="ghost"
             size="sm"
-            disabled={row.id === currentUser.id}
-            onClick={() => setPendingStatusUser(row)}
+            disabled
+            title="Endpoint perubahan status pengguna belum tersedia di backend."
           >
             {row.active ? (
               <PowerOff className="size-3.5" aria-hidden />
@@ -163,20 +194,23 @@ export function UserManagementPage() {
     <>
       <PageHeader
         title="Kelola Pengguna"
-        description="Kelola pengguna, role, unit bisnis, dan status akses."
+        description="Data pengguna, role, unit bisnis, dan status akses dari backend."
         actions={
-          <Button onClick={() => setCreateOpen(true)}>
+          <Button
+            type="button"
+            disabled
+            title="Endpoint tambah pengguna belum tersedia di backend."
+          >
             <Plus className="size-4" aria-hidden />
             Tambah Pengguna
           </Button>
         }
       />
 
-      {pageError ? (
-        <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
-          {pageError}
-        </div>
-      ) : null}
+      <div className="rounded-lg border border-border bg-background-subtle px-4 py-3 text-sm text-muted-foreground">
+        Penambahan, perubahan, dan aktivasi pengguna belum dihubungkan karena Web API saat ini baru
+        menyediakan endpoint baca untuk master pengguna.
+      </div>
 
       <Input
         value={query}
@@ -191,65 +225,6 @@ export function UserManagementPage() {
         rowKey={(row) => row.id}
         emptyTitle="Tidak ada pengguna"
         emptyDescription="Pengguna yang sesuai pencarian akan tampil di sini."
-      />
-
-      {createOpen ? (
-        <UserDialog
-          key="create-user"
-          open
-          units={units}
-          onOpenChange={setCreateOpen}
-          onSubmit={(input) => handleSave(input)}
-        />
-      ) : null}
-
-      {editingUser ? (
-        <UserDialog
-          key={editingUser.id}
-          open
-          user={editingUser}
-          units={units}
-          onOpenChange={(open) => {
-            if (!open) {
-              setEditingUser(null);
-            }
-          }}
-          onSubmit={(input) => handleSave(input, editingUser)}
-        />
-      ) : null}
-
-      <ConfirmationDialog
-        open={pendingStatusUser !== null}
-        onOpenChange={(open) => {
-          if (!open) {
-            setPendingStatusUser(null);
-          }
-        }}
-        title={pendingStatusUser?.active ? "Nonaktifkan Pengguna" : "Aktifkan Pengguna"}
-        description={
-          pendingStatusUser?.active
-            ? "Pengguna tidak dapat menggunakan akun ini selama statusnya nonaktif."
-            : "Pengguna akan kembali mendapatkan akses sesuai role-nya."
-        }
-        confirmLabel={pendingStatusUser?.active ? "Nonaktifkan" : "Aktifkan"}
-        destructive={pendingStatusUser?.active}
-        onConfirm={() => {
-          if (!pendingStatusUser) {
-            return;
-          }
-
-          setPageError(null);
-
-          try {
-            setUserActive(currentUser, pendingStatusUser.id, !pendingStatusUser.active);
-
-            setPendingStatusUser(null);
-          } catch (error) {
-            setPageError(
-              error instanceof Error ? error.message : "Gagal mengubah status pengguna.",
-            );
-          }
-        }}
       />
     </>
   );

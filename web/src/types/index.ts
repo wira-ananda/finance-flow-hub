@@ -34,7 +34,9 @@ export interface User {
   email: string;
   role: UserRole;
   jobTitle: string;
+
   businessUnitId: string | null;
+
   initials: string;
   active: boolean;
 }
@@ -42,19 +44,32 @@ export interface User {
 export interface RequestDocument {
   id: string;
   name: string;
+
   type: RequestDocumentType;
+
   documentNumber?: string;
+
   sizeKb: number;
+
   uploadedAt: string;
+
   uploadedBy: string;
+
+  fileUrl?: string;
 }
 
 export interface RequestPayment {
   amount: number;
+
   paymentDate: string;
+
   referenceNumber: string;
+
   processedBy: string;
+
   processedAt: string;
+
+  proofFileUrl?: string;
 }
 
 export type ActivityAction =
@@ -71,37 +86,62 @@ export type ActivityAction =
 
 export interface ActivityEntry {
   id: string;
+
   action: ActivityAction;
+
+  actorId?: string;
+
   actorName: string;
+
   actorRole: UserRole;
+
   note?: string;
+
   createdAt: string;
 }
 
 export interface FinanceRequest {
   id: string;
+
   requestNumber: string;
+
   title: string;
   description: string;
+
   category: RequestCategory;
+
   amount: number;
+
   status: RequestStatus;
+
   businessUnitId: string;
+
   requesterId: string;
+
   beneficiaryName: string;
+
   beneficiaryBank: string;
+
   beneficiaryAccount: string;
+
   neededAt: string;
+
   createdAt: string;
+
   updatedAt: string;
+
   paidAt: string | null;
+
   payment?: RequestPayment | null;
+
   documents: RequestDocument[];
+
   activities: ActivityEntry[];
 }
 
 export interface SystemSettings {
   emailNotificationsEnabled: boolean;
+
   requesterStatusNotificationsEnabled: boolean;
 }
 
@@ -110,13 +150,18 @@ export interface DashboardStat {
   label: string;
   value: string;
   helper: string;
+
   tone: "neutral" | "primary" | "warning" | "success" | "danger";
 }
 
 export interface NavItem {
   label: string;
+
   to: NavigationPath;
+
   icon: string;
+
   roles: UserRole[];
+
   group: "Utama" | "Finance" | "Administrasi";
 }

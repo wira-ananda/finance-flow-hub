@@ -1,38 +1,33 @@
 import { Pencil, Plus, Power, PowerOff } from "lucide-react";
-import { useState } from "react";
 
-import { BusinessUnitDialog } from "@/components/admin/BusinessUnitDialog";
-import { ConfirmationDialog } from "@/components/common/ConfirmationDialog";
+import { useMemo } from "react";
+
 import { EmptyState } from "@/components/common/EmptyState";
+
+import { ErrorState } from "@/components/common/ErrorState";
+
+import { LoadingState } from "@/components/common/LoadingState";
+
 import { PageHeader } from "@/components/common/PageHeader";
+
 import { StatusBadge } from "@/components/common/StatusBadge";
+
 import { Button } from "@/components/ui/button";
-import { useBusinessUnits } from "@/hooks/use-business-units";
-import { useRequests } from "@/hooks/use-requests";
+
+import { useBusinessUnitsQuery } from "@/hooks/use-business-units";
+
+import { useRequestsQuery } from "@/hooks/use-requests";
+
 import { formatRupiahCompact } from "@/lib/formatters";
+
 import { useSession } from "@/providers/session-provider";
-import {
-  createBusinessUnit,
-  setBusinessUnitActive,
-  updateBusinessUnit,
-  type BusinessUnitInput,
-} from "@/services/business-unit.service";
-import type { BusinessUnit } from "@/types";
 
 export function BusinessUnitPage() {
   const { user } = useSession();
 
-  const units = useBusinessUnits();
+  const unitsQuery = useBusinessUnitsQuery();
 
-  const requests = useRequests(user);
-
-  const [createOpen, setCreateOpen] = useState(false);
-
-  const [editingUnit, setEditingUnit] = useState<BusinessUnit | null>(null);
-
-  const [pendingStatusUnit, setPendingStatusUnit] = useState<BusinessUnit | null>(null);
-
-  const [pageError, setPageError] = useState<string | null>(null);
+  const requestsQuery = useRequestsQuery(user);
 
   if (!user) {
     return null;
@@ -51,46 +46,80 @@ export function BusinessUnitPage() {
     );
   }
 
-  const handleSave = (input: BusinessUnitInput, unit?: BusinessUnit): boolean => {
-    setPageError(null);
+  if (unitsQuery.isPending || requestsQuery.isPending) {
+    return (
+      <>
+        <PageHeader
+          title="Unit Bisnis"
+          description="Data Unit Bisnis dibaca langsung dari Finance API."
+        />
 
-    try {
-      if (unit) {
-        updateBusinessUnit(user, unit.id, input);
-      } else {
-        createBusinessUnit(user, input);
-      }
+        <LoadingState rows={6} />
+      </>
+    );
+  }
 
-      return true;
-    } catch (error) {
-      setPageError(error instanceof Error ? error.message : "Gagal menyimpan Unit Bisnis.");
+  const loadError = unitsQuery.error ?? requestsQuery.error;
 
-      return false;
-    }
-  };
+  if (loadError) {
+    return (
+      <>
+        <PageHeader title="Unit Bisnis" />
+
+        <ErrorState
+          title="Unit Bisnis gagal dimuat"
+          description={loadError.message}
+          onRetry={() => {
+            void Promise.all([unitsQuery.refetch(), requestsQuery.refetch()]);
+          }}
+        />
+      </>
+    );
+  }
+
+  const units = unitsQuery.data ?? [];
+
+  const requests = requestsQuery.data ?? [];
+
+  const requestsByUnit = useMemo(() => {
+    const grouped = new Map<string, typeof requests>();
+
+    requests.forEach((request) => {
+      const current = grouped.get(request.businessUnitId) ?? [];
+
+      current.push(request);
+
+      grouped.set(request.businessUnitId, current);
+    });
+
+    return grouped;
+  }, [requests]);
 
   return (
     <>
       <PageHeader
         title="Unit Bisnis"
-        description="Kelola Unit Bisnis dan lihat ringkasan pengajuan keuangannya."
+        description="Master Unit Bisnis dan ringkasan pengajuan dari backend."
         actions={
-          <Button onClick={() => setCreateOpen(true)}>
+          <Button
+            type="button"
+            disabled
+            title="Endpoint tambah Unit Bisnis belum tersedia di backend."
+          >
             <Plus className="size-4" aria-hidden />
             Tambah Unit
           </Button>
         }
       />
 
-      {pageError ? (
-        <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
-          {pageError}
-        </div>
-      ) : null}
+      <div className="rounded-lg border border-border bg-background-subtle px-4 py-3 text-sm text-muted-foreground">
+        Penambahan, perubahan, dan aktivasi Unit Bisnis belum dihubungkan karena Web API saat ini
+        baru menyediakan endpoint baca untuk master Unit Bisnis.
+      </div>
 
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         {units.map((unit) => {
-          const unitRequests = requests.filter((request) => request.businessUnitId === unit.id);
+          const unitRequests = requestsByUnit.get(unit.id) ?? [];
 
           const total = unitRequests.reduce((sum, request) => sum + request.amount, 0);
 
@@ -159,7 +188,8 @@ export function BusinessUnitPage() {
                   variant="outline"
                   size="sm"
                   className="flex-1"
-                  onClick={() => setEditingUnit(unit)}
+                  disabled
+                  title="Endpoint perubahan Unit Bisnis belum tersedia di backend."
                 >
                   <Pencil className="size-3.5" aria-hidden />
                   Edit
@@ -170,7 +200,8 @@ export function BusinessUnitPage() {
                   variant="outline"
                   size="sm"
                   className="flex-1"
-                  onClick={() => setPendingStatusUnit(unit)}
+                  disabled
+                  title="Endpoint perubahan status Unit Bisnis belum tersedia di backend."
                 >
                   {unit.active ? (
                     <PowerOff className="size-3.5" aria-hidden />
@@ -185,63 +216,6 @@ export function BusinessUnitPage() {
           );
         })}
       </div>
-
-      {createOpen ? (
-        <BusinessUnitDialog
-          key="create-unit"
-          open
-          onOpenChange={setCreateOpen}
-          onSubmit={(input) => handleSave(input)}
-        />
-      ) : null}
-
-      {editingUnit ? (
-        <BusinessUnitDialog
-          key={editingUnit.id}
-          open
-          unit={editingUnit}
-          onOpenChange={(open) => {
-            if (!open) {
-              setEditingUnit(null);
-            }
-          }}
-          onSubmit={(input) => handleSave(input, editingUnit)}
-        />
-      ) : null}
-
-      <ConfirmationDialog
-        open={pendingStatusUnit !== null}
-        onOpenChange={(open) => {
-          if (!open) {
-            setPendingStatusUnit(null);
-          }
-        }}
-        title={pendingStatusUnit?.active ? "Nonaktifkan Unit Bisnis" : "Aktifkan Unit Bisnis"}
-        description={
-          pendingStatusUnit?.active
-            ? "Unit hanya dapat dinonaktifkan jika tidak memiliki pengguna aktif."
-            : "Unit Bisnis akan kembali tersedia untuk pengguna."
-        }
-        confirmLabel={pendingStatusUnit?.active ? "Nonaktifkan" : "Aktifkan"}
-        destructive={pendingStatusUnit?.active}
-        onConfirm={() => {
-          if (!pendingStatusUnit) {
-            return;
-          }
-
-          setPageError(null);
-
-          try {
-            setBusinessUnitActive(user, pendingStatusUnit.id, !pendingStatusUnit.active);
-
-            setPendingStatusUnit(null);
-          } catch (error) {
-            setPageError(
-              error instanceof Error ? error.message : "Gagal mengubah status Unit Bisnis.",
-            );
-          }
-        }}
-      />
     </>
   );
 }

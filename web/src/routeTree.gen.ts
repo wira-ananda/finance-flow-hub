@@ -18,9 +18,11 @@ import { Route as PenggunaRouteImport } from './routes/pengguna'
 import { Route as ReviewRouteImport } from './routes/review'
 import { Route as RiwayatReviewRouteImport } from './routes/riwayat-review'
 import { Route as UnitBisnisRouteImport } from './routes/unit-bisnis'
+import { Route as ApiFinanceRouteImport } from './routes/api.finance'
 import { Route as PengajuanIndexRouteImport } from './routes/pengajuan.index'
 import { Route as PengajuanIdRouteImport } from './routes/pengajuan.$id'
 import { Route as PengajuanBaruRouteImport } from './routes/pengajuan.baru'
+import { Route as ApiAuthGoogleRouteImport } from './routes/api.auth.google'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -67,6 +69,11 @@ const UnitBisnisRoute = UnitBisnisRouteImport.update({
   path: '/unit-bisnis',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiFinanceRoute = ApiFinanceRouteImport.update({
+  id: '/api/finance',
+  path: '/api/finance',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PengajuanIndexRoute = PengajuanIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -82,6 +89,11 @@ const PengajuanBaruRoute = PengajuanBaruRouteImport.update({
   path: '/baru',
   getParentRoute: () => PengajuanRoute,
 } as any)
+const ApiAuthGoogleRoute = ApiAuthGoogleRouteImport.update({
+  id: '/api/auth/google',
+  path: '/api/auth/google',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -93,9 +105,11 @@ export interface FileRoutesByFullPath {
   '/review': typeof ReviewRoute
   '/riwayat-review': typeof RiwayatReviewRoute
   '/unit-bisnis': typeof UnitBisnisRoute
+  '/api/finance': typeof ApiFinanceRoute
   '/pengajuan/$id': typeof PengajuanIdRoute
   '/pengajuan/baru': typeof PengajuanBaruRoute
   '/pengajuan/': typeof PengajuanIndexRoute
+  '/api/auth/google': typeof ApiAuthGoogleRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -106,9 +120,11 @@ export interface FileRoutesByTo {
   '/review': typeof ReviewRoute
   '/riwayat-review': typeof RiwayatReviewRoute
   '/unit-bisnis': typeof UnitBisnisRoute
+  '/api/finance': typeof ApiFinanceRoute
   '/pengajuan/$id': typeof PengajuanIdRoute
   '/pengajuan/baru': typeof PengajuanBaruRoute
   '/pengajuan': typeof PengajuanIndexRoute
+  '/api/auth/google': typeof ApiAuthGoogleRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -121,9 +137,11 @@ export interface FileRoutesById {
   '/review': typeof ReviewRoute
   '/riwayat-review': typeof RiwayatReviewRoute
   '/unit-bisnis': typeof UnitBisnisRoute
+  '/api/finance': typeof ApiFinanceRoute
   '/pengajuan/$id': typeof PengajuanIdRoute
   '/pengajuan/baru': typeof PengajuanBaruRoute
   '/pengajuan/': typeof PengajuanIndexRoute
+  '/api/auth/google': typeof ApiAuthGoogleRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -137,9 +155,11 @@ export interface FileRouteTypes {
     | '/review'
     | '/riwayat-review'
     | '/unit-bisnis'
+    | '/api/finance'
     | '/pengajuan/$id'
     | '/pengajuan/baru'
     | '/pengajuan/'
+    | '/api/auth/google'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -150,9 +170,11 @@ export interface FileRouteTypes {
     | '/review'
     | '/riwayat-review'
     | '/unit-bisnis'
+    | '/api/finance'
     | '/pengajuan/$id'
     | '/pengajuan/baru'
     | '/pengajuan'
+    | '/api/auth/google'
   id:
     | '__root__'
     | '/'
@@ -164,9 +186,11 @@ export interface FileRouteTypes {
     | '/review'
     | '/riwayat-review'
     | '/unit-bisnis'
+    | '/api/finance'
     | '/pengajuan/$id'
     | '/pengajuan/baru'
     | '/pengajuan/'
+    | '/api/auth/google'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -179,6 +203,8 @@ export interface RootRouteChildren {
   ReviewRoute: typeof ReviewRoute
   RiwayatReviewRoute: typeof RiwayatReviewRoute
   UnitBisnisRoute: typeof UnitBisnisRoute
+  ApiFinanceRoute: typeof ApiFinanceRoute
+  ApiAuthGoogleRoute: typeof ApiAuthGoogleRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -246,6 +272,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UnitBisnisRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/finance': {
+      id: '/api/finance'
+      path: '/api/finance'
+      fullPath: '/api/finance'
+      preLoaderRoute: typeof ApiFinanceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/pengajuan/': {
       id: '/pengajuan/'
       path: '/'
@@ -266,6 +299,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/pengajuan/baru'
       preLoaderRoute: typeof PengajuanBaruRouteImport
       parentRoute: typeof PengajuanRoute
+    }
+    '/api/auth/google': {
+      id: '/api/auth/google'
+      path: '/api/auth/google'
+      fullPath: '/api/auth/google'
+      preLoaderRoute: typeof ApiAuthGoogleRouteImport
+      parentRoute: typeof rootRouteImport
     }
   }
 }
@@ -296,6 +336,8 @@ const rootRouteChildren: RootRouteChildren = {
   ReviewRoute: ReviewRoute,
   RiwayatReviewRoute: RiwayatReviewRoute,
   UnitBisnisRoute: UnitBisnisRoute,
+  ApiFinanceRoute: ApiFinanceRoute,
+  ApiAuthGoogleRoute: ApiAuthGoogleRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

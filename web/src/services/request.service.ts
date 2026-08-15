@@ -1,45 +1,78 @@
-import { getMockRequestSnapshot } from "@/data/repositories/mock-request.repository";
-import { formatRupiahCompact } from "@/lib/formatters";
+import { apiGet } from "@/lib/api/client";
+
 import { canViewRequest } from "@/lib/permissions";
-import { getBusinessUnit, listBusinessUnits } from "@/services/business-unit.service";
-import { getUserById, listUsers } from "@/services/user.service";
-import type { ActivityAction, DashboardStat, FinanceRequest, RequestStatus, User } from "@/types";
+
+import { mapApiFinancialRequest, mapApiRequestDetail } from "@/lib/api/mappers";
+
+import { formatRupiahCompact } from "@/lib/formatters";
+
+import type { ApiFinancialRequestRecord, ApiRequestDetail } from "@/types/finance-api";
+
+import type {
+  ActivityAction,
+  BusinessUnit,
+  DashboardStat,
+  FinanceRequest,
+  RequestStatus,
+  User,
+} from "@/types";
 
 export interface DashboardStatsContext {
   activeUserCount?: number;
+
   businessUnitCount?: number;
 }
 
 /**
- * Mengambil seluruh pengajuan yang dapat diakses user.
+ * Mengambil seluruh pengajuan yang dapat diakses actor dari Finance API.
  */
-export function listRequests(
-  user: User,
-  source: FinanceRequest[] = getMockRequestSnapshot(),
-): FinanceRequest[] {
-  return source
-    .filter((request) => canViewRequest(user, request))
+export async function fetchRequests(
+  actorId: string,
+  users: User[],
+  signal?: AbortSignal,
+): Promise<FinanceRequest[]> {
+  const records = await apiGet<ApiFinancialRequestRecord[]>(
+    "requests.list",
+    {
+      actorId,
+    },
+    signal,
+  );
+
+  return records
+    .map((record) => mapApiFinancialRequest(record, users))
     .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
 }
 
 /**
- * Mengambil pengajuan berdasarkan beberapa status.
+ * Mengambil detail pengajuan sesuai permission actor dari Finance API.
  */
-export function listRequestsByStatus(
-  user: User,
-  statuses: RequestStatus[],
-  source: FinanceRequest[] = getMockRequestSnapshot(),
-): FinanceRequest[] {
-  return listRequests(user, source).filter((request) => statuses.includes(request.status));
+export async function fetchRequestDetail(
+  actorId: string,
+  requestId: string,
+  users: User[],
+  signal?: AbortSignal,
+): Promise<FinanceRequest> {
+  const detail = await apiGet<ApiRequestDetail>(
+    "requests.get",
+    {
+      actorId,
+      id: requestId,
+    },
+    signal,
+  );
+
+  return mapApiRequestDetail(detail, users);
 }
 
 /**
- * Mengambil satu pengajuan sesuai permission user.
+ * Compatibility sementara untuk signature service lama sampai Step 7E/7G.
+ * Tidak membaca mock repository; tanpa source explicit helper ini akan mengembalikan undefined.
  */
 export function getRequest(
   user: User,
   id: string,
-  source: FinanceRequest[] = getMockRequestSnapshot(),
+  source: FinanceRequest[] = [],
 ): FinanceRequest | undefined {
   const request = source.find((item) => item.id === id);
 
@@ -51,17 +84,17 @@ export function getRequest(
 }
 
 /**
- * Mengambil nama Unit Bisnis untuk kebutuhan UI.
+ * Mengambil nama Unit Bisnis dari master data yang sudah tersedia.
  */
-export function getBusinessUnitName(businessUnitId: string): string {
-  return getBusinessUnit(businessUnitId)?.name ?? "-";
+export function getBusinessUnitName(businessUnitId: string, units: BusinessUnit[]): string {
+  return units.find((unit) => unit.id === businessUnitId)?.name ?? "-";
 }
 
 /**
- * Mengambil nama user untuk kebutuhan UI.
+ * Mengambil nama user dari master data yang sudah tersedia.
  */
-export function getUserName(userId: string): string {
-  return getUserById(userId)?.name ?? "-";
+export function getUserName(userId: string, users: User[]): string {
+  return users.find((user) => user.id === userId)?.name ?? "-";
 }
 
 /**
@@ -114,10 +147,9 @@ function sumAmount(requests: FinanceRequest[]): number {
 
 export function getDashboardStats(
   user: User,
-  source: FinanceRequest[] = getMockRequestSnapshot(),
+  requests: FinanceRequest[],
   context: DashboardStatsContext = {},
 ): DashboardStat[] {
-  const requests = listRequests(user, source);
   const counts = countByStatus(requests);
 
   if (user.role === "FINANCE_REVIEWER") {
@@ -129,6 +161,7 @@ export function getDashboardStats(
         helper: "Pengajuan baru belum ditinjau",
         tone: "primary",
       },
+
       {
         key: "review",
         label: "Sedang Direview",
@@ -136,6 +169,7 @@ export function getDashboardStats(
         helper: "Sedang dalam proses peninjauan",
         tone: "neutral",
       },
+
       {
         key: "revisi",
         label: "Perlu Revisi",
@@ -143,6 +177,7 @@ export function getDashboardStats(
         helper: "Menunggu perbaikan dari unit",
         tone: "warning",
       },
+
       {
         key: "nilai",
         label: "Nilai Menunggu Keputusan",
@@ -166,6 +201,7 @@ export function getDashboardStats(
         helper: "Sudah disetujui reviewer",
         tone: "primary",
       },
+
       {
         key: "nilai-siap",
         label: "Nilai Siap Dibayar",
@@ -175,6 +211,7 @@ export function getDashboardStats(
         helper: "Total kebutuhan kas",
         tone: "warning",
       },
+
       {
         key: "dibayar",
         label: "Sudah Dibayar",
@@ -182,6 +219,7 @@ export function getDashboardStats(
         helper: "Pembayaran selesai",
         tone: "success",
       },
+
       {
         key: "nilai-dibayar",
         label: "Nilai Sudah Dibayar",
@@ -195,11 +233,6 @@ export function getDashboardStats(
   }
 
   if (user.role === "ADMIN") {
-    const activeUserCount =
-      context.activeUserCount ?? listUsers().filter((item) => item.active).length;
-
-    const businessUnitCount = context.businessUnitCount ?? listBusinessUnits().length;
-
     return [
       {
         key: "total",
@@ -208,6 +241,7 @@ export function getDashboardStats(
         helper: "Seluruh unit bisnis",
         tone: "primary",
       },
+
       {
         key: "aktif",
         label: "Sedang Berjalan",
@@ -217,13 +251,15 @@ export function getDashboardStats(
         helper: "Belum selesai diproses",
         tone: "neutral",
       },
+
       {
         key: "pengguna",
         label: "Pengguna Aktif",
-        value: String(activeUserCount),
-        helper: `${businessUnitCount} unit bisnis terdaftar`,
+        value: String(context.activeUserCount ?? 0),
+        helper: `${context.businessUnitCount ?? 0} unit bisnis terdaftar`,
         tone: "neutral",
       },
+
       {
         key: "nilai",
         label: "Nilai Seluruh Pengajuan",
@@ -242,6 +278,7 @@ export function getDashboardStats(
       helper: "Termasuk draf",
       tone: "primary",
     },
+
     {
       key: "proses",
       label: "Dalam Proses",
@@ -249,6 +286,7 @@ export function getDashboardStats(
       helper: "Menunggu keputusan Finance",
       tone: "neutral",
     },
+
     {
       key: "revisi",
       label: "Perlu Revisi",
@@ -256,6 +294,7 @@ export function getDashboardStats(
       helper: "Perlu tindakan Anda",
       tone: "warning",
     },
+
     {
       key: "dibayar",
       label: "Sudah Dibayar",

@@ -1,266 +1,146 @@
-import { getMockBusinessUnitSnapshot } from "@/data/repositories/mock-business-unit.repository";
-import {
-  getMockUserSnapshot,
-  insertMockUser,
-  updateMockUser,
-} from "@/data/repositories/mock-user.repository";
-import { DEFAULT_USER_BY_ROLE } from "@/data/mock/users";
-import type { User, UserRole } from "@/types";
+import { useState } from "react";
 
-export interface UserInput {
-  name: string;
-  email: string;
-  role: UserRole;
-  jobTitle: string;
-  businessUnitId: string | null;
-}
+import { EmptyState } from "@/components/common/EmptyState";
 
-function assertAdmin(actor: User): void {
-  if (actor.role !== "ADMIN" || !actor.active) {
-    throw new Error("Hanya Administrator aktif yang dapat mengelola pengguna.");
-  }
-}
+import { PageHeader } from "@/components/common/PageHeader";
 
-function createInitials(name: string): string {
-  return name
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? "")
-    .join("");
-}
+import { RoleSwitcher } from "@/components/layout/RoleSwitcher";
 
-function normalizeEmail(email: string): string {
-  return email.trim().toLowerCase();
-}
+import { ThemeSwitcher } from "@/components/layout/ThemeSwitcher";
 
-function validateUserInput(input: UserInput, currentUserId?: string): void {
-  if (!input.name.trim()) {
-    throw new Error("Nama pengguna wajib diisi.");
+import { Switch } from "@/components/ui/switch";
+
+import { useSystemSettings } from "@/hooks/use-system-settings";
+
+import { useSession } from "@/providers/session-provider";
+
+import { updateSystemSettings } from "@/services/system-settings.service";
+
+export function SettingsPage() {
+  const { user } = useSession();
+
+  const settings = useSystemSettings();
+
+  const [error, setError] = useState<string | null>(null);
+
+  if (!user) {
+    return null;
   }
 
-  if (!input.email.trim()) {
-    throw new Error("Email wajib diisi.");
+  if (user.role !== "ADMIN") {
+    return (
+      <>
+        <PageHeader title="Pengaturan Sistem" />
+
+        <EmptyState
+          title="Akses tidak tersedia"
+          description="Halaman ini hanya tersedia untuk Administrator."
+        />
+      </>
+    );
   }
 
-  if (!input.jobTitle.trim()) {
-    throw new Error("Jabatan wajib diisi.");
-  }
+  const updateSetting = (
+    key: "emailNotificationsEnabled" | "requesterStatusNotificationsEnabled",
+    checked: boolean,
+  ) => {
+    setError(null);
 
-  const duplicateEmail = getMockUserSnapshot().some(
-    (user) =>
-      user.id !== currentUserId && normalizeEmail(user.email) === normalizeEmail(input.email),
-  );
+    try {
+      updateSystemSettings(user, {
+        ...settings,
 
-  if (duplicateEmail) {
-    throw new Error("Email sudah digunakan pengguna lain.");
-  }
-
-  if (input.role !== "UNIT_USER") {
-    return;
-  }
-
-  if (!input.businessUnitId) {
-    throw new Error("Unit Bisnis wajib dipilih untuk pengguna Unit Bisnis.");
-  }
-
-  const unit = getMockBusinessUnitSnapshot().find((item) => item.id === input.businessUnitId);
-
-  if (!unit || !unit.active) {
-    throw new Error("Unit Bisnis tidak tersedia atau sedang nonaktif.");
-  }
-}
-
-/**
- * Mengambil seluruh user dari mock repository.
- */
-export function listUsers(): User[] {
-  return [...getMockUserSnapshot()];
-}
-
-/**
- * Mengambil seluruh user aktif.
- *
- * UNIT_USER pada Unit Bisnis nonaktif dianggap
- * tidak memiliki akses aktif.
- */
-export function listActiveUsers(): User[] {
-  const units = getMockBusinessUnitSnapshot();
-
-  return getMockUserSnapshot().filter((user) => {
-    if (!user.active) {
-      return false;
+        [key]: checked,
+      });
+    } catch (updateError) {
+      setError(updateError instanceof Error ? updateError.message : "Pengaturan gagal diperbarui.");
     }
-
-    if (user.role !== "UNIT_USER") {
-      return true;
-    }
-
-    return units.some((unit) => unit.id === user.businessUnitId && unit.active);
-  });
-}
-
-/**
- * Mengambil user berdasarkan ID.
- */
-export function getUserById(id: string): User | undefined {
-  return getMockUserSnapshot().find((user) => user.id === id);
-}
-
-/**
- * Mengambil pengguna aktif default
- * untuk role tertentu.
- *
- * Digunakan Development Role Switcher.
- * Jika default user tidak tersedia,
- * service mencari user aktif lain dengan role yang sama.
- */
-export function getUserForRole(role: UserRole): User {
-  const defaultId = DEFAULT_USER_BY_ROLE[role];
-
-  const users = listActiveUsers();
-
-  const defaultUser = users.find((user) => user.id === defaultId && user.role === role);
-
-  if (defaultUser) {
-    return defaultUser;
-  }
-
-  const fallbackUser = users.find((user) => user.role === role);
-
-  if (!fallbackUser) {
-    throw new Error(`Tidak ada pengguna aktif untuk role ${role}.`);
-  }
-
-  return fallbackUser;
-}
-
-/**
- * ADMIN: membuat user baru.
- */
-export function createUser(actor: User, input: UserInput): User {
-  assertAdmin(actor);
-
-  validateUserInput(input);
-
-  const user: User = {
-    id: `usr-${Date.now()}`,
-
-    name: input.name.trim(),
-
-    email: normalizeEmail(input.email),
-
-    role: input.role,
-
-    jobTitle: input.jobTitle.trim(),
-
-    businessUnitId: input.role === "UNIT_USER" ? input.businessUnitId : null,
-
-    initials: createInitials(input.name),
-
-    active: true,
   };
 
-  return insertMockUser(user);
+  return (
+    <>
+      <PageHeader
+        title="Pengaturan Sistem"
+        description="Preferensi tampilan dan pengaturan development Finance Request."
+      />
+
+      {error ? (
+        <div
+          role="alert"
+          className="rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive"
+        >
+          {error}
+        </div>
+      ) : null}
+
+      <section className="space-y-4 rounded-lg border border-border bg-card p-4 shadow-card">
+        <div>
+          <h2 className="text-sm font-semibold text-foreground">Tema Tampilan</h2>
+
+          <p className="mt-1 text-xs text-muted-foreground">
+            Pilih tema terang, gelap, atau mengikuti sistem.
+          </p>
+        </div>
+
+        <ThemeSwitcher variant="full" />
+      </section>
+
+      {import.meta.env.DEV ? (
+        <section className="space-y-4 rounded-lg border border-border bg-card p-4 shadow-card">
+          <div>
+            <h2 className="text-sm font-semibold text-foreground">Role Pengembangan</h2>
+
+            <p className="mt-1 text-xs text-muted-foreground">
+              Berpindah role menggunakan user aktif yang berasal dari Finance API.
+            </p>
+          </div>
+
+          <RoleSwitcher variant="full" />
+        </section>
+      ) : null}
+
+      <section className="space-y-4 rounded-lg border border-border bg-card p-4 shadow-card">
+        <div>
+          <h2 className="text-sm font-semibold text-foreground">Notifikasi</h2>
+
+          <p className="mt-1 text-xs text-muted-foreground">
+            Pengaturan ini masih menggunakan repository development lokal sampai backend notifikasi
+            tersedia.
+          </p>
+        </div>
+
+        <div className="flex items-center justify-between gap-4 border-t border-border pt-4">
+          <div>
+            <p className="text-sm font-medium text-foreground">Notifikasi Email</p>
+
+            <p className="mt-1 text-xs text-muted-foreground">
+              Mengaktifkan pengiriman notifikasi email dari sistem.
+            </p>
+          </div>
+
+          <Switch
+            checked={settings.emailNotificationsEnabled}
+            onCheckedChange={(checked) => updateSetting("emailNotificationsEnabled", checked)}
+          />
+        </div>
+
+        <div className="flex items-center justify-between gap-4 border-t border-border pt-4">
+          <div>
+            <p className="text-sm font-medium text-foreground">Notifikasi Status ke Pemohon</p>
+
+            <p className="mt-1 text-xs text-muted-foreground">
+              Mengirim perubahan status pengajuan kepada pemohon.
+            </p>
+          </div>
+
+          <Switch
+            checked={settings.requesterStatusNotificationsEnabled}
+            onCheckedChange={(checked) =>
+              updateSetting("requesterStatusNotificationsEnabled", checked)
+            }
+          />
+        </div>
+      </section>
+    </>
+  );
 }
-
-/**
- * ADMIN: memperbarui user.
- */
-export function updateUser(actor: User, userId: string, input: UserInput): User {
-  assertAdmin(actor);
-
-  const existing = getUserById(userId);
-
-  if (!existing) {
-    throw new Error("Pengguna tidak ditemukan.");
-  }
-
-  if (existing.id === actor.id && input.role !== "ADMIN") {
-    throw new Error("Administrator aktif tidak dapat mengubah role dirinya sendiri.");
-  }
-
-  validateUserInput(input, userId);
-
-  const updated = updateMockUser(userId, (user) => ({
-    ...user,
-
-    name: input.name.trim(),
-
-    email: normalizeEmail(input.email),
-
-    role: input.role,
-
-    jobTitle: input.jobTitle.trim(),
-
-    businessUnitId: input.role === "UNIT_USER" ? input.businessUnitId : null,
-
-    initials: createInitials(input.name),
-  }));
-
-  if (!updated) {
-    throw new Error("Gagal memperbarui pengguna.");
-  }
-
-  return updated;
-}
-
-/**
- * ADMIN: mengaktifkan atau menonaktifkan user.
- */
-export function setUserActive(actor: User, userId: string, active: boolean): User {
-  assertAdmin(actor);
-
-  const existing = getUserById(userId);
-
-  if (!existing) {
-    throw new Error("Pengguna tidak ditemukan.");
-  }
-
-  if (existing.id === actor.id && !active) {
-    throw new Error("Anda tidak dapat menonaktifkan akun Administrator yang sedang digunakan.");
-  }
-
-  if (active && existing.role === "UNIT_USER") {
-    const unit = getMockBusinessUnitSnapshot().find((item) => item.id === existing.businessUnitId);
-
-    if (!unit || !unit.active) {
-      throw new Error("Pengguna tidak dapat diaktifkan karena Unit Bisnisnya sedang nonaktif.");
-    }
-  }
-
-  if (!active) {
-    const remainingUsers = listActiveUsers().filter(
-      (user) => user.role === existing.role && user.id !== existing.id,
-    );
-
-    if (remainingUsers.length === 0) {
-      throw new Error(
-        "Minimal satu pengguna aktif harus tersedia untuk setiap role selama development.",
-      );
-    }
-  }
-
-  const updated = updateMockUser(userId, (user) => ({
-    ...user,
-    active,
-  }));
-
-  if (!updated) {
-    throw new Error("Gagal mengubah status pengguna.");
-  }
-
-  return updated;
-}
-
-/**
- * Compatibility export.
- *
- * Dipertahankan agar file lama yang masih
- * mengimpor helper Unit Bisnis dari user.service
- * tidak langsung rusak.
- *
- * Untuk kode baru, lebih baik import langsung
- * dari business-unit.service.
- */
-export { getBusinessUnit, listBusinessUnits } from "@/services/business-unit.service";

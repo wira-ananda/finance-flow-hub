@@ -1,13 +1,25 @@
 import { Link } from "@tanstack/react-router";
+
 import { ArrowLeft, RotateCcw } from "lucide-react";
+
 import { useState } from "react";
 
 import { EmptyState } from "@/components/common/EmptyState";
+
+import { ErrorState } from "@/components/common/ErrorState";
+
+import { LoadingState } from "@/components/common/LoadingState";
+
 import { PageHeader } from "@/components/common/PageHeader";
+
 import { StatCard } from "@/components/common/StatCard";
+
 import { RequestTable } from "@/components/requests/RequestTable";
+
 import { Button } from "@/components/ui/button";
+
 import { Input } from "@/components/ui/input";
+
 import {
   Select,
   SelectContent,
@@ -15,10 +27,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+
 import { STATUS_LABELS } from "@/constants/status";
+
 import { useBusinessUnits } from "@/hooks/use-business-units";
-import { useRequests } from "@/hooks/use-requests";
+
+import { useRequestsQuery } from "@/hooks/use-requests";
+
 import { useSession } from "@/providers/session-provider";
+
 import type { DashboardStat, RequestStatus } from "@/types";
 
 const HISTORY_STATUSES = ["APPROVED", "REJECTED", "PAID"] as const;
@@ -28,11 +45,14 @@ type HistoryStatus = "ALL" | (typeof HISTORY_STATUSES)[number];
 export function ReviewHistoryPage() {
   const { user } = useSession();
 
-  const requests = useRequests(user);
+  const requestsQuery = useRequestsQuery(user);
+
   const units = useBusinessUnits();
 
   const [query, setQuery] = useState("");
+
   const [status, setStatus] = useState<HistoryStatus>("ALL");
+
   const [businessUnitId, setBusinessUnitId] = useState("ALL");
 
   if (!user) {
@@ -57,6 +77,34 @@ export function ReviewHistoryPage() {
     );
   }
 
+  if (requestsQuery.isPending) {
+    return (
+      <>
+        <PageHeader title="Riwayat Review" />
+
+        <LoadingState rows={7} />
+      </>
+    );
+  }
+
+  if (requestsQuery.isError) {
+    return (
+      <>
+        <PageHeader title="Riwayat Review" />
+
+        <ErrorState
+          title="Riwayat review gagal dimuat"
+          description={requestsQuery.error.message}
+          onRetry={() => {
+            void requestsQuery.refetch();
+          }}
+        />
+      </>
+    );
+  }
+
+  const requests = requestsQuery.data ?? [];
+
   const history = requests.filter((request) =>
     HISTORY_STATUSES.some((item) => item === request.status),
   );
@@ -77,6 +125,7 @@ export function ReviewHistoryPage() {
       helper: "Pengajuan yang sudah diputuskan",
       tone: "primary",
     },
+
     {
       key: "approved",
       label: "Disetujui",
@@ -84,6 +133,7 @@ export function ReviewHistoryPage() {
       helper: "Termasuk yang sudah dibayar",
       tone: "success",
     },
+
     {
       key: "rejected",
       label: "Ditolak",
@@ -91,6 +141,7 @@ export function ReviewHistoryPage() {
       helper: "Pengajuan tidak dilanjutkan",
       tone: "danger",
     },
+
     {
       key: "paid",
       label: "Sudah Dibayar",
@@ -117,7 +168,9 @@ export function ReviewHistoryPage() {
 
   const resetFilters = () => {
     setQuery("");
+
     setStatus("ALL");
+
     setBusinessUnitId("ALL");
   };
 

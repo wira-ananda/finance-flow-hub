@@ -1,20 +1,27 @@
 import { Link } from "@tanstack/react-router";
+
 import { ArrowLeft, Info } from "lucide-react";
 
 import { ConfirmationDialog } from "@/components/common/ConfirmationDialog";
+
 import { PageHeader } from "@/components/common/PageHeader";
+
 import {
   AttachmentsSection,
   BeneficiarySection,
   RequestDetailsSection,
   RequestSummary,
 } from "@/components/requests/form/RequestFormSections";
+
 import { Button } from "@/components/ui/button";
+
 import { useRequestForm } from "@/hooks/use-request-form";
+
 import type { FinanceRequest, User } from "@/types";
 
 interface RequestFormProps {
   user: User;
+
   initialRequest?: FinanceRequest;
 }
 
@@ -45,6 +52,7 @@ export function RequestForm({ user, initialRequest }: RequestFormProps) {
 
           <div>
             <p className="text-sm font-medium text-foreground">Catatan Revisi Finance</p>
+
             <p className="mt-1 text-sm leading-6 text-muted-foreground">
               {form.revisionNote ??
                 "Finance meminta pengajuan ini diperbaiki sebelum diajukan kembali."}
@@ -54,8 +62,10 @@ export function RequestForm({ user, initialRequest }: RequestFormProps) {
       ) : (
         <div className="flex items-start gap-2.5 rounded-lg border border-border bg-background-subtle p-3.5">
           <Info className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
+
           <p className="text-sm text-muted-foreground">
-            Selama tahap development, data dan metadata dokumen disimpan secara lokal di browser.
+            Data pengajuan sudah tersambung ke Finance API. Upload dokumen pendukung akan diaktifkan
+            pada integrasi file berikutnya.
           </p>
         </div>
       )}
@@ -73,6 +83,7 @@ export function RequestForm({ user, initialRequest }: RequestFormProps) {
         className="grid gap-4 lg:grid-cols-3"
         onSubmit={(event) => {
           event.preventDefault();
+
           form.handleOpenSubmit();
         }}
       >
@@ -91,11 +102,7 @@ export function RequestForm({ user, initialRequest }: RequestFormProps) {
             disabled={form.isSaving}
           />
 
-          <AttachmentsSection
-            values={form.values}
-            setField={form.setField}
-            disabled={form.isSaving}
-          />
+          <AttachmentsSection values={form.values} setField={form.setField} disabled />
         </div>
 
         <RequestSummary
