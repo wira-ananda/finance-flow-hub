@@ -61,3 +61,7 @@ function recordRequestHistory(
 
   return insertHistoryRecord(history);
 }
+
+function deleteHistoryRecord(historyId: string): boolean {
+  return deleteRecordById(APP_CONFIG.sheets.requestHistories, historyId);
+}

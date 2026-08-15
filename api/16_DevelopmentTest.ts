@@ -371,3 +371,70 @@ function test6CPaymentProofWorkflow(): void {
 
   console.log("=== PAYMENT PROOF TEST COMPLETE ===");
 }
+
+function test6DApprovalDocumentWorkflow(): void {
+  console.log("=== APPROVAL DOCUMENT TEST START ===");
+
+  const unitUserId = "usr-01";
+
+  const reviewerId = "usr-03";
+
+  const request = createRequestService(unitUserId, {
+    title: "Pengujian Surat Persetujuan",
+
+    description:
+      "Pengajuan ini dibuat untuk menguji generate Surat Persetujuan otomatis.",
+
+    category: "PENGADAAN",
+
+    amount: 3750000,
+
+    beneficiaryName: "PT Vendor Approval Test",
+
+    beneficiaryBank: "Bank Mandiri",
+
+    beneficiaryAccount: "123456789012",
+
+    neededAt: "2026-08-30",
+
+    submitNow: true,
+  });
+
+  console.log(`SUBMITTED: ${request.request_number}`);
+
+  startReviewService(reviewerId, request.id);
+
+  const approved = approveRequestService(reviewerId, request.id);
+
+  if (approved.status !== "APPROVED") {
+    throw new Error(`Expected APPROVED, received ${approved.status}`);
+  }
+
+  const document = findApprovalDocumentByRequestId(request.id);
+
+  if (!document) {
+    throw new Error("Surat Persetujuan tidak ditemukan.");
+  }
+
+  if (!document.file_id) {
+    throw new Error("Approval PDF file ID kosong.");
+  }
+
+  const pdfFile = DriveApp.getFileById(document.file_id);
+
+  if (pdfFile.getMimeType() !== MimeType.PDF) {
+    throw new Error(`Expected PDF, received ${pdfFile.getMimeType()}`);
+  }
+
+  console.log(`DOCUMENT NUMBER: ${document.document_number}`);
+
+  console.log(`PDF: ${pdfFile.getName()}`);
+
+  console.log(`SIZE: ${document.size_kb} KB`);
+
+  console.log(`URL: ${document.file_url}`);
+
+  console.log(`STATUS: ${approved.status}`);
+
+  console.log("=== APPROVAL DOCUMENT TEST COMPLETE ===");
+}

@@ -47,3 +47,7 @@ function recordReviewAction(
     created_at: nowIso(),
   });
 }
+
+function deleteReviewRecord(reviewId: string): boolean {
+  return deleteRecordById(APP_CONFIG.sheets.requestReviews, reviewId);
+}

@@ -178,31 +178,82 @@ function approveRequestService(
 
     const timestamp = nowIso();
 
-    const updated = updateRequestRecord(request.id, {
-      status: "APPROVED",
-
-      approved_at: timestamp,
-
-      approved_by: actor.id,
-
-      updated_at: timestamp,
-    });
-
-    recordReviewAction(request.id, actor.id, "APPROVE");
-
-    recordRequestHistory(
-      request.id,
-      actor.id,
-      "APPROVED",
-      previousStatus,
-      "APPROVED",
+    /*
+     * Dokumen dibuat sebelum status final diubah.
+     * Kalau generate PDF gagal, request tetap UNDER_REVIEW.
+     */
+    const approvalDocument = generateApprovalDocumentService(
+      request,
+      actor,
+      timestamp,
     );
 
-    /*
-     * Generate Surat Persetujuan belum di sini.
-     * Itu masuk Step 6D.
-     */
+    let requestUpdated = false;
 
-    return updated;
+    let reviewRecord: RequestReviewRecord | null = null;
+
+    let historyRecord: RequestHistoryRecord | null = null;
+
+    try {
+      const updated = updateRequestRecord(request.id, {
+        status: "APPROVED",
+
+        approved_at: timestamp,
+
+        approved_by: actor.id,
+
+        updated_at: timestamp,
+      });
+
+      requestUpdated = true;
+
+      reviewRecord = recordReviewAction(request.id, actor.id, "APPROVE");
+
+      historyRecord = recordRequestHistory(
+        request.id,
+        actor.id,
+        "APPROVED",
+        previousStatus,
+        "APPROVED",
+      );
+
+      return updated;
+    } catch (error) {
+      if (historyRecord) {
+        try {
+          deleteHistoryRecord(historyRecord.id);
+        } catch (rollbackError) {
+          console.error("Rollback history gagal.", rollbackError);
+        }
+      }
+
+      if (reviewRecord) {
+        try {
+          deleteReviewRecord(reviewRecord.id);
+        } catch (rollbackError) {
+          console.error("Rollback review gagal.", rollbackError);
+        }
+      }
+
+      if (requestUpdated) {
+        try {
+          updateRequestRecord(request.id, {
+            status: request.status,
+
+            approved_at: request.approved_at,
+
+            approved_by: request.approved_by,
+
+            updated_at: request.updated_at,
+          });
+        } catch (rollbackError) {
+          console.error("Rollback request gagal.", rollbackError);
+        }
+      }
+
+      rollbackApprovalDocument(approvalDocument);
+
+      throw error;
+    }
   });
 }

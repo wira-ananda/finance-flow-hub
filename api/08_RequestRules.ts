@@ -16,6 +16,21 @@ type RequestCategory =
   | "REIMBURSEMENT"
   | "PEMASARAN";
 
+type RequestDocumentType = "SURAT_PERSETUJUAN";
+
+interface RequestDocumentRecord {
+  id: string;
+  request_id: string;
+  document_type: RequestDocumentType;
+  document_number: string;
+  file_name: string;
+  file_id: string;
+  file_url: string;
+  size_kb: number;
+  generated_at: string;
+  generated_by: string;
+}
+
 interface UserRecord {
   id: string;
   name: string;
