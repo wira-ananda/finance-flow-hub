@@ -4,8 +4,6 @@ import { EmptyState } from "@/components/common/EmptyState";
 
 import { PageHeader } from "@/components/common/PageHeader";
 
-import { RoleSwitcher } from "@/components/layout/RoleSwitcher";
-
 import { ThemeSwitcher } from "@/components/layout/ThemeSwitcher";
 
 import { Switch } from "@/components/ui/switch";
@@ -84,20 +82,6 @@ export function SettingsPage() {
 
         <ThemeSwitcher variant="full" />
       </section>
-
-      {import.meta.env.DEV ? (
-        <section className="space-y-4 rounded-lg border border-border bg-card p-4 shadow-card">
-          <div>
-            <h2 className="text-sm font-semibold text-foreground">Role Pengembangan</h2>
-
-            <p className="mt-1 text-xs text-muted-foreground">
-              Berpindah role menggunakan user aktif yang berasal dari Finance API.
-            </p>
-          </div>
-
-          <RoleSwitcher variant="full" />
-        </section>
-      ) : null}
 
       <section className="space-y-4 rounded-lg border border-border bg-card p-4 shadow-card">
         <div>
