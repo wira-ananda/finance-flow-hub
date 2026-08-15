@@ -175,3 +175,17 @@ function withDatabaseLock<T>(callback: () => T): T {
     lock.releaseLock();
   }
 }
+
+function deleteRecordById(sheetName: string, id: string): boolean {
+  const sheet = getDatabaseSheet(sheetName);
+
+  const rowIndex = findSheetRowIndexById(sheetName, id);
+
+  if (!rowIndex) {
+    return false;
+  }
+
+  sheet.deleteRow(rowIndex);
+
+  return true;
+}

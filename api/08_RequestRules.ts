@@ -76,10 +76,41 @@ interface RequestPaymentRecord {
   amount: number;
   payment_date: string;
   reference_number: string;
+
+  proof_file_name: string;
   proof_file_id: string;
   proof_file_url: string;
+  proof_mime_type: string;
+  proof_size_kb: number;
+
   processed_by: string;
   processed_at: string;
+}
+
+interface UploadFileInput {
+  name: string;
+  mimeType: string;
+  base64: string;
+}
+
+interface StoredDriveFile {
+  fileId: string;
+  fileUrl: string;
+  fileName: string;
+  mimeType: string;
+  sizeKb: number;
+}
+
+interface RequestAttachmentRecord {
+  id: string;
+  request_id: string;
+  file_name: string;
+  file_id: string;
+  file_url: string;
+  mime_type: string;
+  size_kb: number;
+  uploaded_by: string;
+  created_at: string;
 }
 
 const REQUEST_STATUS_TRANSITIONS: Record<RequestStatus, RequestStatus[]> = {

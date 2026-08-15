@@ -209,10 +209,39 @@ function routeRequest(request: ParsedApiRequest) {
       );
     }
 
+    case "attachments.upload": {
+      assertPostRequest(request);
+
+      const actorId = requireString(request.body.actorId, "actorId");
+
+      const requestId = requireString(request.body.id, "id");
+
+      const file = request.body.file as UploadFileInput;
+
+      return successResponse(
+        uploadRequestAttachmentService(actorId, requestId, file),
+        "Attachment berhasil diupload.",
+      );
+    }
+
+    case "attachments.delete": {
+      assertPostRequest(request);
+
+      const actorId = requireString(request.body.actorId, "actorId");
+
+      const attachmentId = requireString(
+        request.body.attachmentId,
+        "attachmentId",
+      );
+
+      deleteRequestAttachmentService(actorId, attachmentId);
+
+      return successResponse(null, "Attachment berhasil dihapus.");
+    }
+
     // =========================
     // PAYMENT
     // =========================
-
     case "payments.process": {
       assertPostRequest(request);
 

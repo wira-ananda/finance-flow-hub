@@ -49,9 +49,7 @@ function test6BFullWorkflow() {
 
     referenceNumber: `DEV-${Date.now()}`,
 
-    proofFileId: "development-proof-file-id",
-
-    proofFileUrl: "https://example.com/development-proof",
+    proofFile: createDevelopmentPdfUpload("bukti-transfer-development.pdf"),
   });
 
   console.log(`PAID: ${paid.status}`);
@@ -232,4 +230,144 @@ function test6BInvalidTransition(): void {
   }
 
   console.log("=== INVALID TRANSITION TEST COMPLETE ===");
+}
+
+function createDevelopmentPdfUpload(fileName: string): UploadFileInput {
+  const content = [
+    "%PDF-1.4",
+    "1 0 obj",
+    "<< /Type /Catalog >>",
+    "endobj",
+    "trailer",
+    "<<>>",
+    "%%EOF",
+  ].join("\n");
+
+  const bytes = Utilities.newBlob(content).getBytes();
+
+  return {
+    name: fileName,
+    mimeType: "application/pdf",
+    base64: Utilities.base64Encode(bytes),
+  };
+}
+
+function test6CAttachmentWorkflow(): void {
+  console.log("=== ATTACHMENT TEST START ===");
+
+  const unitUserId = "usr-01";
+
+  const request = createRequestService(unitUserId, {
+    title: "Attachment Drive Test",
+
+    description: "Pengujian integrasi attachment ke Google Drive.",
+
+    category: "OPERASIONAL",
+
+    amount: 500000,
+
+    beneficiaryName: "Vendor Attachment",
+
+    beneficiaryBank: "BCA",
+
+    beneficiaryAccount: "123456789",
+
+    neededAt: "2026-08-30",
+
+    submitNow: false,
+  });
+
+  const attachment = uploadRequestAttachmentService(
+    unitUserId,
+    request.id,
+    createDevelopmentPdfUpload("invoice-test.pdf"),
+  );
+
+  console.log(`UPLOADED: ${attachment.file_name}`);
+
+  console.log(`FILE ID: ${attachment.file_id}`);
+
+  const driveFile = DriveApp.getFileById(attachment.file_id);
+
+  if (driveFile.isTrashed()) {
+    throw new Error("Attachment seharusnya tidak berada di trash.");
+  }
+
+  deleteRequestAttachmentService(unitUserId, attachment.id);
+
+  const deletedRecord = findAttachmentRecordById(attachment.id);
+
+  if (deletedRecord) {
+    throw new Error("Attachment record masih ada setelah delete.");
+  }
+
+  console.log("ATTACHMENT DELETE: OK");
+
+  console.log("=== ATTACHMENT TEST COMPLETE ===");
+}
+
+function test6CPaymentProofWorkflow(): void {
+  console.log("=== PAYMENT PROOF TEST START ===");
+
+  const unitUserId = "usr-01";
+
+  const reviewerId = "usr-03";
+
+  const paymentUserId = "usr-04";
+
+  const request = createRequestService(unitUserId, {
+    title: "Payment Proof Drive Test",
+
+    description: "Pengujian bukti pembayaran Google Drive.",
+
+    category: "OPERASIONAL",
+
+    amount: 1250000,
+
+    beneficiaryName: "Vendor Payment Test",
+
+    beneficiaryBank: "Mandiri",
+
+    beneficiaryAccount: "1234567890",
+
+    neededAt: "2026-08-30",
+
+    submitNow: true,
+  });
+
+  startReviewService(reviewerId, request.id);
+
+  approveRequestService(reviewerId, request.id);
+
+  const paid = processPaymentService(paymentUserId, request.id, {
+    amount: 1200000,
+
+    paymentDate: "2026-08-15",
+
+    referenceNumber: `PAY-${Date.now()}`,
+
+    proofFile: createDevelopmentPdfUpload("payment-proof-test.pdf"),
+  });
+
+  if (paid.status !== "PAID") {
+    throw new Error(`Expected PAID, received ${paid.status}`);
+  }
+
+  const payment = findPaymentByRequestId(request.id);
+
+  if (!payment) {
+    throw new Error("Payment record tidak ditemukan.");
+  }
+
+  if (!payment.proof_file_id) {
+    throw new Error("Drive proof file ID tidak ditemukan.");
+  }
+
+  const proofFile = DriveApp.getFileById(payment.proof_file_id);
+
+  console.log(`PROOF: ${proofFile.getName()}`);
+
+  console.log(`STATUS: ${paid.status}`);
+
+  console.log("=== PAYMENT PROOF TEST COMPLETE ===");
 }

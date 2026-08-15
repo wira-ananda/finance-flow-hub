@@ -100,8 +100,11 @@ const DATABASE_SCHEMA = Object.freeze({
     "amount",
     "payment_date",
     "reference_number",
+    "proof_file_name",
     "proof_file_id",
     "proof_file_url",
+    "proof_mime_type",
+    "proof_size_kb",
     "processed_by",
     "processed_at",
   ],
@@ -116,4 +119,9 @@ const DATABASE_SCHEMA = Object.freeze({
     "notes",
     "created_at",
   ],
+});
+const FILE_UPLOAD_CONFIG = Object.freeze({
+  maxBytes: 10 * 1024 * 1024,
+
+  allowedMimeTypes: ["application/pdf", "image/jpeg"],
 });

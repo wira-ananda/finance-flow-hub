@@ -2,13 +2,7 @@ interface ProcessPaymentPayload {
   amount: number;
   paymentDate: string;
   referenceNumber: string;
-
-  /**
-   * Step 6B boleh diisi dummy untuk testing.
-   * Step 6C nanti berasal dari Google Drive upload.
-   */
-  proofFileId: string;
-  proofFileUrl: string;
+  proofFile: UploadFileInput;
 }
 
 function processPaymentService(
@@ -43,7 +37,7 @@ function processPaymentService(
 
     const amount = Number(payload.amount);
 
-    if (amount <= 0) {
+    if (!Number.isFinite(amount) || amount <= 0) {
       throw createDomainError(
         "Nominal pembayaran harus lebih besar dari Rp0.",
         "VALIDATION_ERROR",
@@ -68,9 +62,23 @@ function processPaymentService(
       );
     }
 
+    if (!payload.proofFile) {
+      throw createDomainError(
+        "Bukti pembayaran wajib diupload.",
+        "PAYMENT_PROOF_REQUIRED",
+      );
+    }
+
+    const storedProof = storeUploadFile(
+      getPaymentProofsRootFolder(),
+      request.request_number,
+      "PAYMENT_PROOF",
+      payload.proofFile,
+    );
+
     const timestamp = nowIso();
 
-    insertPaymentRecord({
+    const payment: RequestPaymentRecord = {
       id: createEntityId("payment"),
 
       request_id: request.id,
@@ -81,32 +89,82 @@ function processPaymentService(
 
       reference_number: referenceNumber,
 
-      proof_file_id: String(payload.proofFileId ?? ""),
+      proof_file_name: storedProof.fileName,
 
-      proof_file_url: String(payload.proofFileUrl ?? ""),
+      proof_file_id: storedProof.fileId,
+
+      proof_file_url: storedProof.fileUrl,
+
+      proof_mime_type: storedProof.mimeType,
+
+      proof_size_kb: storedProof.sizeKb,
 
       processed_by: actor.id,
 
       processed_at: timestamp,
-    });
+    };
 
-    const updated = updateRequestRecord(request.id, {
-      status: "PAID",
+    let paymentInserted = false;
 
-      paid_at: timestamp,
+    let requestUpdated = false;
 
-      updated_at: timestamp,
-    });
+    try {
+      insertPaymentRecord(payment);
 
-    recordRequestHistory(
-      request.id,
-      actor.id,
-      "PAID",
-      "APPROVED",
-      "PAID",
-      `Pembayaran ${referenceNumber}`,
-    );
+      paymentInserted = true;
 
-    return updated;
+      const updated = updateRequestRecord(request.id, {
+        status: "PAID",
+
+        paid_at: timestamp,
+
+        updated_at: timestamp,
+      });
+
+      requestUpdated = true;
+
+      recordRequestHistory(
+        request.id,
+        actor.id,
+        "PAID",
+        "APPROVED",
+        "PAID",
+        `Pembayaran ${referenceNumber}`,
+      );
+
+      return updated;
+    } catch (error) {
+      /*
+       * Google Sheets dan Drive bukan satu transaction.
+       * Kalau salah satu write gagal, kita lakukan kompensasi
+       * agar state sebisa mungkin kembali seperti sebelumnya.
+       */
+
+      if (requestUpdated) {
+        try {
+          updateRequestRecord(request.id, {
+            status: request.status,
+
+            paid_at: request.paid_at,
+
+            updated_at: request.updated_at,
+          });
+        } catch (rollbackError) {
+          console.error("Rollback request gagal.", rollbackError);
+        }
+      }
+
+      if (paymentInserted) {
+        try {
+          deletePaymentRecord(payment.id);
+        } catch (rollbackError) {
+          console.error("Rollback payment gagal.", rollbackError);
+        }
+      }
+
+      safeTrashDriveFile(storedProof.fileId);
+
+      throw error;
+    }
   });
 }
