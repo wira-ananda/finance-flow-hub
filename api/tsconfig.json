@@ -8,13 +8,13 @@
     "noImplicitAny": true,
     "noEmitOnError": true,
 
-    "rootDir": ".",
+    "rootDir": "src",
     "outDir": "dist",
 
     "removeComments": false,
     "sourceMap": false,
     "skipLibCheck": true
   },
-  "include": ["*.ts"],
+  "include": ["src/**/*.ts"],
   "exclude": ["dist", "node_modules"]
 }
