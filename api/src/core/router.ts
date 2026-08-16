@@ -109,6 +109,17 @@ function requireObject(value: unknown, field: string): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 
+function requireBoolean(value: unknown, field: string): boolean {
+  if (typeof value !== "boolean") {
+    throw createDomainError(
+      `${field} wajib berupa boolean.`,
+      "VALIDATION_ERROR",
+    );
+  }
+
+  return value;
+}
+
 function routeRequest(
   request: ParsedApiRequest,
 ): GoogleAppsScript.Content.TextOutput {
@@ -129,16 +140,126 @@ function routeRequest(
       return handleSchemaValidation();
     }
 
+    // ==================================================
+    // USERS
+    // ==================================================
+
     case "users.list": {
       assertGetRequest(request);
 
       return handleListUsers();
     }
 
+    case "users.create": {
+      assertPostRequest(request);
+
+      const actorId = requireString(request.body.actorId, "actorId");
+
+      const user = requireObject(
+        request.body.user,
+        "user",
+      ) as unknown as UserInput;
+
+      return successResponse(
+        createUserService(actorId, user),
+        "Pengguna berhasil ditambahkan.",
+      );
+    }
+
+    case "users.update": {
+      assertPostRequest(request);
+
+      const actorId = requireString(request.body.actorId, "actorId");
+
+      const userId = requireString(request.body.id, "id");
+
+      const user = requireObject(
+        request.body.user,
+        "user",
+      ) as unknown as UserInput;
+
+      return successResponse(
+        updateUserService(actorId, userId, user),
+        "Pengguna berhasil diperbarui.",
+      );
+    }
+
+    case "users.set-active": {
+      assertPostRequest(request);
+
+      const actorId = requireString(request.body.actorId, "actorId");
+
+      const userId = requireString(request.body.id, "id");
+
+      const isActive = requireBoolean(request.body.isActive, "isActive");
+
+      return successResponse(
+        setUserActiveService(actorId, userId, isActive),
+        isActive
+          ? "Pengguna berhasil diaktifkan."
+          : "Pengguna berhasil dinonaktifkan.",
+      );
+    }
+
+    // ==================================================
+    // BUSINESS UNITS
+    // ==================================================
+
     case "business-units.list": {
       assertGetRequest(request);
 
       return handleListBusinessUnits();
+    }
+
+    case "business-units.create": {
+      assertPostRequest(request);
+
+      const actorId = requireString(request.body.actorId, "actorId");
+
+      const unit = requireObject(
+        request.body.unit,
+        "unit",
+      ) as unknown as BusinessUnitInput;
+
+      return successResponse(
+        createBusinessUnitService(actorId, unit),
+        "Unit Bisnis berhasil ditambahkan.",
+      );
+    }
+
+    case "business-units.update": {
+      assertPostRequest(request);
+
+      const actorId = requireString(request.body.actorId, "actorId");
+
+      const businessUnitId = requireString(request.body.id, "id");
+
+      const unit = requireObject(
+        request.body.unit,
+        "unit",
+      ) as unknown as BusinessUnitInput;
+
+      return successResponse(
+        updateBusinessUnitService(actorId, businessUnitId, unit),
+        "Unit Bisnis berhasil diperbarui.",
+      );
+    }
+
+    case "business-units.set-active": {
+      assertPostRequest(request);
+
+      const actorId = requireString(request.body.actorId, "actorId");
+
+      const businessUnitId = requireString(request.body.id, "id");
+
+      const isActive = requireBoolean(request.body.isActive, "isActive");
+
+      return successResponse(
+        setBusinessUnitActiveService(actorId, businessUnitId, isActive),
+        isActive
+          ? "Unit Bisnis berhasil diaktifkan."
+          : "Unit Bisnis berhasil dinonaktifkan.",
+      );
     }
 
     // ==================================================
@@ -321,7 +442,9 @@ function routeRequest(
       assertGetRequest(request);
 
       const actorId = requireString(request.query.actorId, "actorId");
+
       const requestId = requireString(request.query.requestId, "requestId");
+
       const fileId = requireString(request.query.fileId, "fileId");
 
       return successResponse(
@@ -388,9 +511,13 @@ function handleHealth(): GoogleAppsScript.Content.TextOutput {
   return successResponse(
     {
       app: APP_CONFIG.appName,
+
       version: APP_CONFIG.version,
+
       status: "ok",
+
       database: spreadsheet.getName(),
+
       timestamp: nowIso(),
     },
     "Finance Request API aktif.",

@@ -1,6 +1,12 @@
-import { Pencil, Plus, Power, PowerOff } from "lucide-react";
+import { useState } from "react";
 
-import { useMemo } from "react";
+import { Plus } from "lucide-react";
+
+import { BusinessUnitCard } from "@/components/admin/BusinessUnitCard";
+
+import { BusinessUnitDialog } from "@/components/admin/BusinessUnitDialog";
+
+import { ConfirmationDialog } from "@/components/common/ConfirmationDialog";
 
 import { EmptyState } from "@/components/common/EmptyState";
 
@@ -10,17 +16,34 @@ import { LoadingState } from "@/components/common/LoadingState";
 
 import { PageHeader } from "@/components/common/PageHeader";
 
-import { StatusBadge } from "@/components/common/StatusBadge";
-
 import { Button } from "@/components/ui/button";
 
-import { useBusinessUnitsQuery } from "@/hooks/use-business-units";
+import { useBusinessUnitMutation, useBusinessUnitsQuery } from "@/hooks/use-business-units";
 
 import { useRequestsQuery } from "@/hooks/use-requests";
 
-import { formatRupiahCompact } from "@/lib/formatters";
-
 import { useSession } from "@/providers/session-provider";
+
+import type { BusinessUnitInput } from "@/services/business-unit.service";
+
+import type { BusinessUnit, FinanceRequest } from "@/types";
+
+/**
+ * Mengelompokkan pengajuan berdasarkan Unit Bisnis.
+ */
+function groupRequestsByBusinessUnit(requests: FinanceRequest[]): Map<string, FinanceRequest[]> {
+  const grouped = new Map<string, FinanceRequest[]>();
+
+  requests.forEach((request) => {
+    const current = grouped.get(request.businessUnitId) ?? [];
+
+    current.push(request);
+
+    grouped.set(request.businessUnitId, current);
+  });
+
+  return grouped;
+}
 
 export function BusinessUnitPage() {
   const { user } = useSession();
@@ -28,6 +51,16 @@ export function BusinessUnitPage() {
   const unitsQuery = useBusinessUnitsQuery();
 
   const requestsQuery = useRequestsQuery(user);
+
+  const unitMutation = useBusinessUnitMutation(user);
+
+  const [unitDialogOpen, setUnitDialogOpen] = useState(false);
+
+  const [editingUnit, setEditingUnit] = useState<BusinessUnit | null>(null);
+
+  const [statusTarget, setStatusTarget] = useState<BusinessUnit | null>(null);
+
+  const [actionError, setActionError] = useState<string | null>(null);
 
   if (!user) {
     return null;
@@ -81,141 +114,172 @@ export function BusinessUnitPage() {
 
   const requests = requestsQuery.data ?? [];
 
-  const requestsByUnit = useMemo(() => {
-    const grouped = new Map<string, typeof requests>();
+  const requestsByUnit = groupRequestsByBusinessUnit(requests);
 
-    requests.forEach((request) => {
-      const current = grouped.get(request.businessUnitId) ?? [];
+  const handleCreate = () => {
+    setActionError(null);
 
-      current.push(request);
+    setEditingUnit(null);
 
-      grouped.set(request.businessUnitId, current);
-    });
+    setUnitDialogOpen(true);
+  };
 
-    return grouped;
-  }, [requests]);
+  const handleEdit = (unit: BusinessUnit) => {
+    setActionError(null);
+
+    setEditingUnit(unit);
+
+    setUnitDialogOpen(true);
+  };
+
+  const handleSubmitUnit = async (input: BusinessUnitInput): Promise<boolean> => {
+    if (unitMutation.isPending) {
+      return false;
+    }
+
+    setActionError(null);
+
+    try {
+      if (editingUnit) {
+        await unitMutation.mutateAsync({
+          type: "UPDATE",
+
+          businessUnitId: editingUnit.id,
+
+          input,
+        });
+      } else {
+        await unitMutation.mutateAsync({
+          type: "CREATE",
+
+          input,
+        });
+      }
+
+      return true;
+    } catch (error) {
+      throw new Error(error instanceof Error ? error.message : "Unit Bisnis gagal disimpan.");
+    }
+  };
+
+  const handleConfirmStatus = async (): Promise<boolean> => {
+    if (!statusTarget || unitMutation.isPending) {
+      return false;
+    }
+
+    setActionError(null);
+
+    try {
+      await unitMutation.mutateAsync({
+        type: "SET_ACTIVE",
+
+        businessUnitId: statusTarget.id,
+
+        isActive: !statusTarget.active,
+      });
+
+      setStatusTarget(null);
+
+      return true;
+    } catch (error) {
+      setActionError(
+        error instanceof Error ? error.message : "Status Unit Bisnis gagal diperbarui.",
+      );
+
+      return false;
+    }
+  };
 
   return (
     <>
       <PageHeader
         title="Unit Bisnis"
-        description="Master Unit Bisnis dan ringkasan pengajuan dari backend."
+        description="Kelola master Unit Bisnis, cost center, manajer, dan status operasional."
         actions={
-          <Button
-            type="button"
-            disabled
-            title="Endpoint tambah Unit Bisnis belum tersedia di backend."
-          >
+          <Button type="button" disabled={unitMutation.isPending} onClick={handleCreate}>
             <Plus className="size-4" aria-hidden />
             Tambah Unit
           </Button>
         }
       />
 
+      {actionError ? (
+        <div
+          role="alert"
+          className="rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive"
+        >
+          {actionError}
+        </div>
+      ) : null}
+
       <div className="rounded-lg border border-border bg-background-subtle px-4 py-3 text-sm text-muted-foreground">
-        Penambahan, perubahan, dan aktivasi Unit Bisnis belum dihubungkan karena Web API saat ini
-        baru menyediakan endpoint baca untuk master Unit Bisnis.
+        Unit Bisnis tidak dihapus permanen agar histori pengajuan tetap konsisten. Unit yang sudah
+        tidak digunakan dapat dinonaktifkan setelah tidak memiliki pengguna aktif.
       </div>
 
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-        {units.map((unit) => {
-          const unitRequests = requestsByUnit.get(unit.id) ?? [];
-
-          const total = unitRequests.reduce((sum, request) => sum + request.amount, 0);
-
-          const latest = unitRequests[0];
-
-          return (
-            <article
+      {units.length === 0 ? (
+        <EmptyState
+          title="Belum ada Unit Bisnis"
+          description="Tambahkan Unit Bisnis pertama untuk mulai mengatur akses pengguna Unit Bisnis."
+          action={
+            <Button type="button" onClick={handleCreate}>
+              <Plus className="size-4" aria-hidden />
+              Tambah Unit
+            </Button>
+          }
+        />
+      ) : (
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {units.map((unit) => (
+            <BusinessUnitCard
               key={unit.id}
-              className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4 shadow-card"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="num text-xs font-medium tracking-wide text-primary uppercase">
-                    {unit.code}
-                  </p>
+              unit={unit}
+              requests={requestsByUnit.get(unit.id) ?? []}
+              disabled={unitMutation.isPending}
+              onEdit={handleEdit}
+              onToggleActive={(selectedUnit) => {
+                setActionError(null);
 
-                  <h2 className="mt-1 truncate text-sm font-semibold text-foreground">
-                    {unit.name}
-                  </h2>
+                setStatusTarget(selectedUnit);
+              }}
+            />
+          ))}
+        </div>
+      )}
 
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {unit.costCenter}
-                    {" · "}
-                    Manajer {unit.managerName}
-                  </p>
-                </div>
+      {unitDialogOpen ? (
+        <BusinessUnitDialog
+          key={editingUnit?.id ?? "new-business-unit"}
+          open
+          unit={editingUnit ?? undefined}
+          onOpenChange={(open) => {
+            setUnitDialogOpen(open);
 
-                <span
-                  className={
-                    unit.active
-                      ? "status-approved inline-flex rounded-md px-2 py-0.5 text-xs font-medium"
-                      : "status-draft inline-flex rounded-md px-2 py-0.5 text-xs font-medium"
-                  }
-                >
-                  {unit.active ? "Aktif" : "Nonaktif"}
-                </span>
-              </div>
+            if (!open) {
+              setEditingUnit(null);
+            }
+          }}
+          onSubmit={handleSubmitUnit}
+        />
+      ) : null}
 
-              <dl className="grid grid-cols-2 gap-3 border-t border-border pt-3 text-sm">
-                <div>
-                  <dt className="text-xs text-muted-foreground">Pengajuan</dt>
-
-                  <dd className="num font-semibold text-foreground">{unitRequests.length}</dd>
-                </div>
-
-                <div>
-                  <dt className="text-xs text-muted-foreground">Total Nilai</dt>
-
-                  <dd className="num font-semibold text-foreground">
-                    {formatRupiahCompact(total)}
-                  </dd>
-                </div>
-              </dl>
-
-              {latest ? (
-                <div className="flex items-center justify-between gap-2 border-t border-border pt-3">
-                  <span className="truncate text-xs text-muted-foreground">{latest.title}</span>
-
-                  <StatusBadge status={latest.status} />
-                </div>
-              ) : null}
-
-              <div className="mt-auto flex gap-2 border-t border-border pt-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="flex-1"
-                  disabled
-                  title="Endpoint perubahan Unit Bisnis belum tersedia di backend."
-                >
-                  <Pencil className="size-3.5" aria-hidden />
-                  Edit
-                </Button>
-
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="flex-1"
-                  disabled
-                  title="Endpoint perubahan status Unit Bisnis belum tersedia di backend."
-                >
-                  {unit.active ? (
-                    <PowerOff className="size-3.5" aria-hidden />
-                  ) : (
-                    <Power className="size-3.5" aria-hidden />
-                  )}
-
-                  {unit.active ? "Nonaktif" : "Aktifkan"}
-                </Button>
-              </div>
-            </article>
-          );
-        })}
-      </div>
+      <ConfirmationDialog
+        open={statusTarget !== null}
+        onOpenChange={(open) => {
+          if (!open && !unitMutation.isPending) {
+            setStatusTarget(null);
+          }
+        }}
+        title={statusTarget?.active ? "Nonaktifkan Unit Bisnis" : "Aktifkan Unit Bisnis"}
+        description={
+          statusTarget?.active
+            ? `Unit ${statusTarget.name} tidak dapat dipakai untuk pengguna baru setelah dinonaktifkan. Sistem akan menolak proses jika masih ada pengguna aktif pada unit ini.`
+            : `Unit ${statusTarget?.name ?? "ini"} akan kembali tersedia untuk pengguna Unit Bisnis.`
+        }
+        confirmLabel={statusTarget?.active ? "Ya, Nonaktifkan" : "Ya, Aktifkan"}
+        destructive={Boolean(statusTarget?.active)}
+        onConfirm={handleConfirmStatus}
+      />
     </>
   );
 }

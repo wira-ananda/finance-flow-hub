@@ -1,8 +1,12 @@
-import { Pencil, Plus, Power, PowerOff } from "lucide-react";
+import { useState } from "react";
 
-import { useMemo, useState } from "react";
+import { Plus } from "lucide-react";
 
-import { DataTable, type DataTableColumn } from "@/components/common/DataTable";
+import { UserDialog } from "@/components/admin/UserDialog";
+
+import { UserManagementTable } from "@/components/admin/UserManagementTable";
+
+import { ConfirmationDialog } from "@/components/common/ConfirmationDialog";
 
 import { EmptyState } from "@/components/common/EmptyState";
 
@@ -16,13 +20,13 @@ import { Button } from "@/components/ui/button";
 
 import { Input } from "@/components/ui/input";
 
-import { ROLE_LABELS } from "@/constants/status";
-
 import { useBusinessUnitsQuery } from "@/hooks/use-business-units";
 
-import { useUsersQuery } from "@/hooks/use-users";
+import { useUserMutation, useUsersQuery } from "@/hooks/use-users";
 
 import { useSession } from "@/providers/session-provider";
+
+import type { UserInput } from "@/services/user.service";
 
 import type { User } from "@/types";
 
@@ -33,25 +37,17 @@ export function UserManagementPage() {
 
   const unitsQuery = useBusinessUnitsQuery();
 
+  const userMutation = useUserMutation(currentUser);
+
   const [query, setQuery] = useState("");
 
-  const users = usersQuery.data ?? [];
+  const [userDialogOpen, setUserDialogOpen] = useState(false);
 
-  const units = unitsQuery.data ?? [];
+  const [editingUser, setEditingUser] = useState<User | null>(null);
 
-  const filteredUsers = useMemo(() => {
-    const normalized = query.trim().toLowerCase();
+  const [statusTarget, setStatusTarget] = useState<User | null>(null);
 
-    if (!normalized) {
-      return users;
-    }
-
-    return users.filter(
-      (user) =>
-        user.name.toLowerCase().includes(normalized) ||
-        user.email.toLowerCase().includes(normalized),
-    );
-  }, [users, query]);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   if (!currentUser) {
     return null;
@@ -101,130 +97,175 @@ export function UserManagementPage() {
     );
   }
 
-  const getUnitName = (businessUnitId: string | null) =>
-    units.find((unit) => unit.id === businessUnitId)?.name ?? "Seluruh Unit";
+  const users = usersQuery.data ?? [];
 
-  const columns: DataTableColumn<User>[] = [
-    {
-      key: "name",
-      header: "Nama",
-      render: (row) => (
-        <div>
-          <p className="font-medium text-foreground">{row.name}</p>
+  const units = unitsQuery.data ?? [];
 
-          <p className="text-xs text-muted-foreground">{row.email}</p>
-        </div>
-      ),
-    },
+  const normalizedQuery = query.trim().toLowerCase();
 
-    {
-      key: "role",
-      header: "Role",
-      render: (row) => ROLE_LABELS[row.role],
-    },
+  const filteredUsers = normalizedQuery
+    ? users.filter(
+        (user) =>
+          user.name.toLowerCase().includes(normalizedQuery) ||
+          user.email.toLowerCase().includes(normalizedQuery) ||
+          user.jobTitle.toLowerCase().includes(normalizedQuery),
+      )
+    : users;
 
-    {
-      key: "unit",
-      header: "Unit Bisnis",
-      render: (row) => (
-        <span className="text-muted-foreground">{getUnitName(row.businessUnitId)}</span>
-      ),
-    },
+  const handleCreate = () => {
+    setActionError(null);
 
-    {
-      key: "title",
-      header: "Jabatan",
-      render: (row) => <span className="text-muted-foreground">{row.jobTitle}</span>,
-    },
+    setEditingUser(null);
 
-    {
-      key: "status",
-      header: "Status",
-      render: (row) => (
-        <span
-          className={
-            row.active
-              ? "status-approved inline-flex rounded-md px-2 py-0.5 text-xs font-medium"
-              : "status-draft inline-flex rounded-md px-2 py-0.5 text-xs font-medium"
-          }
-        >
-          {row.active ? "Aktif" : "Nonaktif"}
-        </span>
-      ),
-    },
+    setUserDialogOpen(true);
+  };
 
-    {
-      key: "actions",
-      header: "Aksi",
-      align: "right",
-      render: (row) => (
-        <div className="flex justify-end gap-1">
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            disabled
-            title="Endpoint perubahan pengguna belum tersedia di backend."
-          >
-            <Pencil className="size-3.5" aria-hidden />
-            Edit
-          </Button>
+  const handleEdit = (user: User) => {
+    setActionError(null);
 
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            disabled
-            title="Endpoint perubahan status pengguna belum tersedia di backend."
-          >
-            {row.active ? (
-              <PowerOff className="size-3.5" aria-hidden />
-            ) : (
-              <Power className="size-3.5" aria-hidden />
-            )}
+    setEditingUser(user);
 
-            {row.active ? "Nonaktifkan" : "Aktifkan"}
-          </Button>
-        </div>
-      ),
-    },
-  ];
+    setUserDialogOpen(true);
+  };
+
+  const handleSubmitUser = async (input: UserInput): Promise<boolean> => {
+    if (userMutation.isPending) {
+      return false;
+    }
+
+    setActionError(null);
+
+    try {
+      if (editingUser) {
+        await userMutation.mutateAsync({
+          type: "UPDATE",
+
+          userId: editingUser.id,
+
+          input,
+        });
+      } else {
+        await userMutation.mutateAsync({
+          type: "CREATE",
+
+          input,
+        });
+      }
+
+      return true;
+    } catch (error) {
+      throw new Error(error instanceof Error ? error.message : "Pengguna gagal disimpan.");
+    }
+  };
+
+  const handleConfirmStatus = async (): Promise<boolean> => {
+    if (!statusTarget || userMutation.isPending) {
+      return false;
+    }
+
+    setActionError(null);
+
+    try {
+      await userMutation.mutateAsync({
+        type: "SET_ACTIVE",
+
+        userId: statusTarget.id,
+
+        isActive: !statusTarget.active,
+      });
+
+      setStatusTarget(null);
+
+      return true;
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "Status pengguna gagal diperbarui.");
+
+      return false;
+    }
+  };
 
   return (
     <>
       <PageHeader
         title="Kelola Pengguna"
-        description="Data pengguna, role, unit bisnis, dan status akses dari backend."
+        description="Kelola Google Account yang diizinkan masuk, role, Unit Bisnis, jabatan, dan status akses."
         actions={
-          <Button
-            type="button"
-            disabled
-            title="Endpoint tambah pengguna belum tersedia di backend."
-          >
+          <Button type="button" disabled={userMutation.isPending} onClick={handleCreate}>
             <Plus className="size-4" aria-hidden />
             Tambah Pengguna
           </Button>
         }
       />
 
+      {actionError ? (
+        <div
+          role="alert"
+          className="rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive"
+        >
+          {actionError}
+        </div>
+      ) : null}
+
       <div className="rounded-lg border border-border bg-background-subtle px-4 py-3 text-sm text-muted-foreground">
-        Penambahan, perubahan, dan aktivasi pengguna belum dihubungkan karena Web API saat ini baru
-        menyediakan endpoint baca untuk master pengguna.
+        Sistem tidak menyimpan password. Pengguna hanya dapat masuk jika email yang didaftarkan sama
+        dengan Google Account yang berhasil diverifikasi saat login. Menonaktifkan pengguna akan
+        memblokir akses API tanpa menghapus histori pengajuan.
       </div>
 
       <Input
         value={query}
         onChange={(event) => setQuery(event.target.value)}
-        placeholder="Cari nama atau email pengguna"
+        placeholder="Cari nama, email, atau jabatan pengguna"
         className="max-w-md"
       />
 
-      <DataTable
-        columns={columns}
-        rows={filteredUsers}
-        rowKey={(row) => row.id}
-        emptyTitle="Tidak ada pengguna"
-        emptyDescription="Pengguna yang sesuai pencarian akan tampil di sini."
+      <UserManagementTable
+        users={filteredUsers}
+        units={units}
+        currentUserId={currentUser.id}
+        disabled={userMutation.isPending}
+        onEdit={handleEdit}
+        onToggleActive={(selectedUser) => {
+          setActionError(null);
+
+          setStatusTarget(selectedUser);
+        }}
+      />
+
+      {userDialogOpen ? (
+        <UserDialog
+          key={editingUser?.id ?? "new-user"}
+          open
+          user={editingUser ?? undefined}
+          currentUserId={currentUser.id}
+          units={units}
+          onOpenChange={(open) => {
+            setUserDialogOpen(open);
+
+            if (!open) {
+              setEditingUser(null);
+            }
+          }}
+          onSubmit={handleSubmitUser}
+        />
+      ) : null}
+
+      <ConfirmationDialog
+        open={statusTarget !== null}
+        onOpenChange={(open) => {
+          if (!open && !userMutation.isPending) {
+            setStatusTarget(null);
+          }
+        }}
+        title={statusTarget?.active ? "Nonaktifkan Pengguna" : "Aktifkan Pengguna"}
+        description={
+          statusTarget?.active
+            ? `${statusTarget.name} tidak akan dapat menggunakan Finance Request setelah dinonaktifkan. Histori pengajuan tetap tersimpan.`
+            : `${statusTarget?.name ?? "Pengguna ini"} akan kembali dapat masuk menggunakan Google Account yang terdaftar.`
+        }
+        confirmLabel={statusTarget?.active ? "Ya, Nonaktifkan" : "Ya, Aktifkan"}
+        destructive={Boolean(statusTarget?.active)}
+        onConfirm={handleConfirmStatus}
       />
     </>
   );

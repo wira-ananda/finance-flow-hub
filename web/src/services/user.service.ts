@@ -1,4 +1,4 @@
-import { apiGet } from "@/lib/api/client";
+import { apiGet, apiPost } from "@/lib/api/client";
 
 import { mapApiUser } from "@/lib/api/mappers";
 
@@ -8,11 +8,52 @@ import type { BusinessUnit, User, UserRole } from "@/types";
 
 export interface UserInput {
   name: string;
+
   email: string;
+
   role: UserRole;
+
   jobTitle: string;
 
   businessUnitId: string | null;
+}
+
+interface UserMutationBody extends Record<string, unknown> {
+  actorId: string;
+
+  user: UserInput;
+}
+
+interface UserUpdateBody extends UserMutationBody {
+  id: string;
+}
+
+interface UserActiveBody extends Record<string, unknown> {
+  actorId: string;
+
+  id: string;
+
+  isActive: boolean;
+}
+
+function assertAdminUser(user: User): void {
+  if (user.role !== "ADMIN" || !user.active) {
+    throw new Error("Hanya Administrator aktif yang dapat mengelola pengguna.");
+  }
+}
+
+function normalizeUserInput(input: UserInput): UserInput {
+  return {
+    name: input.name.trim(),
+
+    email: input.email.trim().toLowerCase(),
+
+    role: input.role,
+
+    jobTitle: input.jobTitle.trim(),
+
+    businessUnitId: input.role === "UNIT_USER" ? input.businessUnitId : null,
+  };
 }
 
 /**
@@ -22,6 +63,55 @@ export async function fetchUsers(signal?: AbortSignal): Promise<User[]> {
   const records = await apiGet<ApiUserRecord[]>("users.list", {}, signal);
 
   return records.map(mapApiUser).sort((a, b) => a.name.localeCompare(b.name, "id"));
+}
+
+/**
+ * Membuat pengguna baru yang diizinkan login memakai Google Account dengan email yang sama.
+ */
+export async function createUser(actor: User, input: UserInput): Promise<User> {
+  assertAdminUser(actor);
+
+  const record = await apiPost<ApiUserRecord, UserMutationBody>("users.create", {
+    actorId: actor.id,
+
+    user: normalizeUserInput(input),
+  });
+
+  return mapApiUser(record);
+}
+
+/**
+ * Memperbarui identitas, role, jabatan, dan konteks Unit Bisnis pengguna.
+ */
+export async function updateUser(actor: User, userId: string, input: UserInput): Promise<User> {
+  assertAdminUser(actor);
+
+  const record = await apiPost<ApiUserRecord, UserUpdateBody>("users.update", {
+    actorId: actor.id,
+
+    id: userId,
+
+    user: normalizeUserInput(input),
+  });
+
+  return mapApiUser(record);
+}
+
+/**
+ * Mengaktifkan atau menonaktifkan akses pengguna tanpa menghapus histori referensinya.
+ */
+export async function setUserActive(actor: User, userId: string, isActive: boolean): Promise<User> {
+  assertAdminUser(actor);
+
+  const record = await apiPost<ApiUserRecord, UserActiveBody>("users.set-active", {
+    actorId: actor.id,
+
+    id: userId,
+
+    isActive,
+  });
+
+  return mapApiUser(record);
 }
 
 /**
@@ -51,7 +141,7 @@ export function listActiveUsers(users: User[], units: BusinessUnit[]): User[] {
 }
 
 /**
- * Mengambil user aktif default untuk Development Role Switcher.
+ * Compatibility helper lama untuk development data. Akan dibersihkan pada Step 7I.
  */
 export function getUserForRole(users: User[], units: BusinessUnit[], role: UserRole): User {
   const activeUsers = listActiveUsers(users, units).filter((user) => user.role === role);
