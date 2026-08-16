@@ -314,6 +314,23 @@ function routeRequest(
     }
 
     // ==================================================
+    // FILE ACCESS
+    // ==================================================
+
+    case "files.get": {
+      assertGetRequest(request);
+
+      const actorId = requireString(request.query.actorId, "actorId");
+      const requestId = requireString(request.query.requestId, "requestId");
+      const fileId = requireString(request.query.fileId, "fileId");
+
+      return successResponse(
+        getRequestFileService(actorId, requestId, fileId),
+        "File pengajuan berhasil dimuat.",
+      );
+    }
+
+    // ==================================================
     // PAYMENT
     // ==================================================
 

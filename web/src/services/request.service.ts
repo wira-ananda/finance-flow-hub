@@ -1,12 +1,6 @@
 import { apiGet } from "@/lib/api/client";
-
-import { canViewRequest } from "@/lib/permissions";
-
 import { mapApiFinancialRequest, mapApiRequestDetail } from "@/lib/api/mappers";
-
 import { formatRupiahCompact } from "@/lib/formatters";
-
-import type { ApiFinancialRequestRecord, ApiRequestDetail } from "@/types/finance-api";
 
 import type {
   ActivityAction,
@@ -16,10 +10,10 @@ import type {
   RequestStatus,
   User,
 } from "@/types";
+import type { ApiFinancialRequestRecord, ApiRequestDetail } from "@/types/finance-api";
 
 export interface DashboardStatsContext {
   activeUserCount?: number;
-
   businessUnitCount?: number;
 }
 
@@ -63,24 +57,6 @@ export async function fetchRequestDetail(
   );
 
   return mapApiRequestDetail(detail, users);
-}
-
-/**
- * Compatibility sementara untuk signature service lama sampai Step 7E/7G.
- * Tidak membaca mock repository; tanpa source explicit helper ini akan mengembalikan undefined.
- */
-export function getRequest(
-  user: User,
-  id: string,
-  source: FinanceRequest[] = [],
-): FinanceRequest | undefined {
-  const request = source.find((item) => item.id === id);
-
-  if (!request || !canViewRequest(user, request)) {
-    return undefined;
-  }
-
-  return request;
 }
 
 /**
@@ -161,7 +137,6 @@ export function getDashboardStats(
         helper: "Pengajuan baru belum ditinjau",
         tone: "primary",
       },
-
       {
         key: "review",
         label: "Sedang Direview",
@@ -169,7 +144,6 @@ export function getDashboardStats(
         helper: "Sedang dalam proses peninjauan",
         tone: "neutral",
       },
-
       {
         key: "revisi",
         label: "Perlu Revisi",
@@ -177,7 +151,6 @@ export function getDashboardStats(
         helper: "Menunggu perbaikan dari unit",
         tone: "warning",
       },
-
       {
         key: "nilai",
         label: "Nilai Menunggu Keputusan",
@@ -201,7 +174,6 @@ export function getDashboardStats(
         helper: "Sudah disetujui reviewer",
         tone: "primary",
       },
-
       {
         key: "nilai-siap",
         label: "Nilai Siap Dibayar",
@@ -211,7 +183,6 @@ export function getDashboardStats(
         helper: "Total kebutuhan kas",
         tone: "warning",
       },
-
       {
         key: "dibayar",
         label: "Sudah Dibayar",
@@ -219,7 +190,6 @@ export function getDashboardStats(
         helper: "Pembayaran selesai",
         tone: "success",
       },
-
       {
         key: "nilai-dibayar",
         label: "Nilai Sudah Dibayar",
@@ -241,7 +211,6 @@ export function getDashboardStats(
         helper: "Seluruh unit bisnis",
         tone: "primary",
       },
-
       {
         key: "aktif",
         label: "Sedang Berjalan",
@@ -251,7 +220,6 @@ export function getDashboardStats(
         helper: "Belum selesai diproses",
         tone: "neutral",
       },
-
       {
         key: "pengguna",
         label: "Pengguna Aktif",
@@ -259,7 +227,6 @@ export function getDashboardStats(
         helper: `${context.businessUnitCount ?? 0} unit bisnis terdaftar`,
         tone: "neutral",
       },
-
       {
         key: "nilai",
         label: "Nilai Seluruh Pengajuan",
@@ -278,7 +245,6 @@ export function getDashboardStats(
       helper: "Termasuk draf",
       tone: "primary",
     },
-
     {
       key: "proses",
       label: "Dalam Proses",
@@ -286,7 +252,6 @@ export function getDashboardStats(
       helper: "Menunggu keputusan Finance",
       tone: "neutral",
     },
-
     {
       key: "revisi",
       label: "Perlu Revisi",
@@ -294,7 +259,6 @@ export function getDashboardStats(
       helper: "Perlu tindakan Anda",
       tone: "warning",
     },
-
     {
       key: "dibayar",
       label: "Sudah Dibayar",

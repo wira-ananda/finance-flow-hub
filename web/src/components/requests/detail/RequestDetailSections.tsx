@@ -1,22 +1,16 @@
-import { AlertTriangle, Download, FileText } from "lucide-react";
+import { AlertTriangle, Download, ExternalLink, FileText } from "lucide-react";
 
 import { StatusBadge } from "@/components/common/StatusBadge";
-
 import { Button } from "@/components/ui/button";
-
 import { CATEGORY_LABELS, DOCUMENT_TYPE_LABELS } from "@/constants/status";
-
 import { useBusinessUnits } from "@/hooks/use-business-units";
-
 import { useUsers } from "@/hooks/use-users";
-
 import {
   formatRupiah,
   formatTanggal,
   formatTanggalWaktu,
   formatUkuranFile,
 } from "@/lib/formatters";
-
 import {
   getBusinessUnitName,
   getLatestActivityNote,
@@ -34,6 +28,23 @@ function InfoRow({ label, value }: { label: string; value: string }) {
       <span className="max-w-[60%] text-right text-sm font-medium text-foreground">{value}</span>
     </div>
   );
+}
+
+/**
+ * Membentuk same-origin URL untuk membuka atau mengunduh file melalui session aplikasi.
+ */
+function getSecureFileUrl(
+  requestId: string,
+  fileId: string,
+  disposition: "inline" | "attachment",
+): string {
+  const params = new URLSearchParams({
+    requestId,
+    fileId,
+    disposition,
+  });
+
+  return `/api/finance-file?${params.toString()}`;
 }
 
 export function RequestStatusAlert({ request }: { request: FinanceRequest }) {
@@ -77,9 +88,7 @@ export function RequestStatusAlert({ request }: { request: FinanceRequest }) {
 
 export function RequestInformationSection({ request }: { request: FinanceRequest }) {
   const users = useUsers();
-
   const units = useBusinessUnits();
-
   const submittedAt = getLatestSubmittedAt(request);
 
   return (
@@ -90,22 +99,15 @@ export function RequestInformationSection({ request }: { request: FinanceRequest
 
       <div className="mt-3">
         <InfoRow label="Kategori" value={CATEGORY_LABELS[request.category]} />
-
         <InfoRow label="Nominal" value={formatRupiah(request.amount)} />
-
         <InfoRow label="Pemohon" value={getUserName(request.requesterId, users)} />
-
         <InfoRow label="Unit Bisnis" value={getBusinessUnitName(request.businessUnitId, units)} />
-
         <InfoRow label="Dibutuhkan Tanggal" value={formatTanggal(request.neededAt)} />
-
         <InfoRow label="Dibuat" value={formatTanggal(request.createdAt)} />
-
         <InfoRow
           label="Tanggal Diajukan"
           value={submittedAt ? formatTanggal(submittedAt) : "Belum diajukan"}
         />
-
         <InfoRow
           label="Tanggal Pembayaran"
           value={request.paidAt ? formatTanggal(request.paidAt) : "Belum dibayar"}
@@ -122,9 +124,7 @@ export function BeneficiaryInformationSection({ request }: { request: FinanceReq
 
       <div className="mt-2">
         <InfoRow label="Nama Penerima" value={request.beneficiaryName} />
-
         <InfoRow label="Bank" value={request.beneficiaryBank} />
-
         <InfoRow label="Nomor Rekening" value={request.beneficiaryAccount} />
       </div>
     </section>
@@ -154,16 +154,12 @@ export function PaymentInformationSection({ request }: { request: FinanceRequest
 
       <div className="mt-3">
         <InfoRow label="Nominal Pembayaran" value={formatRupiah(request.payment.amount)} />
-
         <InfoRow
           label="Tanggal Pembayaran"
           value={formatTanggal(`${request.payment.paymentDate}T00:00:00Z`)}
         />
-
         <InfoRow label="Nomor Referensi" value={request.payment.referenceNumber} />
-
         <InfoRow label="Diproses Oleh" value={getUserName(request.payment.processedBy, users)} />
-
         <InfoRow label="Waktu Diproses" value={formatTanggalWaktu(request.payment.processedAt)} />
       </div>
     </section>
@@ -171,6 +167,8 @@ export function PaymentInformationSection({ request }: { request: FinanceRequest
 }
 
 interface RequestDocumentsSectionProps {
+  requestId: string;
+
   title: string;
 
   documents: RequestDocument[];
@@ -183,6 +181,7 @@ interface RequestDocumentsSectionProps {
 }
 
 export function RequestDocumentsSection({
+  requestId,
   title,
   documents,
   emptyDescription,
@@ -197,52 +196,68 @@ export function RequestDocumentsSection({
         <p className="mt-2 text-sm text-muted-foreground">{emptyDescription}</p>
       ) : (
         <ul className="mt-3 divide-y divide-border">
-          {documents.map((document) => (
-            <li key={document.id} className="flex items-center gap-3 py-3">
-              <span
-                className={
-                  highlight
-                    ? "flex size-8 shrink-0 items-center justify-center rounded-md bg-primary/10"
-                    : "flex size-8 shrink-0 items-center justify-center rounded-md bg-background-subtle"
-                }
-              >
-                <FileText
-                  className={highlight ? "size-4 text-primary" : "size-4 text-muted-foreground"}
-                  aria-hidden
-                />
-              </span>
+          {documents.map((document) => {
+            const openUrl = document.fileId
+              ? getSecureFileUrl(requestId, document.fileId, "inline")
+              : null;
 
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-medium text-foreground">
-                  {document.name}
+            const downloadUrl = document.fileId
+              ? getSecureFileUrl(requestId, document.fileId, "attachment")
+              : null;
+
+            return (
+              <li key={document.id} className="flex items-center gap-3 py-3">
+                <span
+                  className={
+                    highlight
+                      ? "flex size-8 shrink-0 items-center justify-center rounded-md bg-primary/10"
+                      : "flex size-8 shrink-0 items-center justify-center rounded-md bg-background-subtle"
+                  }
+                >
+                  <FileText
+                    className={highlight ? "size-4 text-primary" : "size-4 text-muted-foreground"}
+                    aria-hidden
+                  />
                 </span>
 
-                <span className="mt-0.5 block text-xs text-muted-foreground">
-                  {showDocumentType ? `${DOCUMENT_TYPE_LABELS[document.type]} · ` : ""}
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-medium text-foreground">
+                    {document.name}
+                  </span>
 
-                  {document.documentNumber ? `${document.documentNumber} · ` : ""}
+                  <span className="mt-0.5 block text-xs text-muted-foreground">
+                    {showDocumentType ? `${DOCUMENT_TYPE_LABELS[document.type]} · ` : ""}
 
-                  {formatUkuranFile(document.sizeKb)}
+                    {document.documentNumber ? `${document.documentNumber} · ` : ""}
+
+                    {formatUkuranFile(document.sizeKb)}
+                  </span>
+
+                  <span className="mt-0.5 block text-xs text-muted-foreground">
+                    {document.uploadedBy} · {formatTanggal(document.uploadedAt)}
+                  </span>
                 </span>
 
-                <span className="mt-0.5 block text-xs text-muted-foreground">
-                  {document.uploadedBy} · {formatTanggal(document.uploadedAt)}
-                </span>
-              </span>
+                {openUrl && downloadUrl ? (
+                  <div className="flex shrink-0 gap-1">
+                    <Button asChild variant="ghost" size="sm" className="text-muted-foreground">
+                      <a href={openUrl} target="_blank" rel="noreferrer">
+                        <ExternalLink className="size-3.5" aria-hidden />
+                        Buka
+                      </a>
+                    </Button>
 
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                disabled
-                title="Unduh akan aktif setelah integrasi Google Drive."
-                className="text-muted-foreground"
-              >
-                <Download className="size-3.5" aria-hidden />
-                Unduh
-              </Button>
-            </li>
-          ))}
+                    <Button asChild variant="ghost" size="sm" className="text-muted-foreground">
+                      <a href={downloadUrl}>
+                        <Download className="size-3.5" aria-hidden />
+                        Unduh
+                      </a>
+                    </Button>
+                  </div>
+                ) : null}
+              </li>
+            );
+          })}
         </ul>
       )}
     </section>

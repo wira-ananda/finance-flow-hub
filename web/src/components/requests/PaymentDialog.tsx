@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import { FileUpload, type FileUploadItem } from "@/components/common/FileUpload";
+import { FileUpload } from "@/components/common/FileUpload";
 import { FormField } from "@/components/common/FormField";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,9 +12,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { MAX_WEB_UPLOAD_SIZE_MB } from "@/lib/file-upload";
 import { formatRupiah } from "@/lib/formatters";
-import type { FinanceRequest } from "@/types";
+
 import type { ProcessPaymentInput } from "@/services/payment.service";
+import type { FinanceRequest } from "@/types";
+import type { FileUploadItem } from "@/types/files";
 
 interface PaymentDialogProps {
   open: boolean;
@@ -25,11 +28,8 @@ interface PaymentDialogProps {
 
 function getTodayInput(): string {
   const now = new Date();
-
   const year = now.getFullYear();
-
   const month = String(now.getMonth() + 1).padStart(2, "0");
-
   const day = String(now.getDate()).padStart(2, "0");
 
   return `${year}-${month}-${day}`;
@@ -37,18 +37,21 @@ function getTodayInput(): string {
 
 export function PaymentDialog({ open, request, onOpenChange, onConfirm }: PaymentDialogProps) {
   const [amount, setAmount] = useState(String(request.amount));
-
   const [paymentDate, setPaymentDate] = useState(getTodayInput());
-
   const [referenceNumber, setReferenceNumber] = useState("");
-
   const [proof, setProof] = useState<FileUploadItem[]>([]);
-
   const [error, setError] = useState<string | null>(null);
-
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const numericAmount = Number(amount.replace(/\D/g, ""));
+
+  const handleDialogOpenChange = (nextOpen: boolean) => {
+    if (isSubmitting) {
+      return;
+    }
+
+    onOpenChange(nextOpen);
+  };
 
   const handleSubmit = async () => {
     if (isSubmitting) {
@@ -57,31 +60,21 @@ export function PaymentDialog({ open, request, onOpenChange, onConfirm }: Paymen
 
     if (numericAmount <= 0) {
       setError("Nominal pembayaran wajib diisi.");
-
       return;
     }
 
     if (!paymentDate) {
       setError("Tanggal pembayaran wajib diisi.");
-
       return;
     }
 
     if (!referenceNumber.trim()) {
       setError("Nomor referensi bank wajib diisi.");
-
       return;
     }
 
-    if (proof.length === 0) {
+    if (!proof[0]?.file) {
       setError("Bukti transfer wajib dilampirkan.");
-
-      return;
-    }
-
-    if (!/\.(pdf|jpe?g)$/i.test(proof[0]!.name)) {
-      setError("Bukti transfer harus berupa PDF, JPG, atau JPEG.");
-
       return;
     }
 
@@ -91,24 +84,23 @@ export function PaymentDialog({ open, request, onOpenChange, onConfirm }: Paymen
     try {
       const success = await onConfirm({
         amount: numericAmount,
-
         paymentDate,
-
         referenceNumber: referenceNumber.trim(),
-
-        proof: proof[0]!,
+        proof: proof[0],
       });
 
       if (success) {
         onOpenChange(false);
       }
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : "Pembayaran gagal diproses.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleDialogOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Proses Pembayaran</DialogTitle>
@@ -123,7 +115,6 @@ export function PaymentDialog({ open, request, onOpenChange, onConfirm }: Paymen
         <div className="space-y-4">
           <div className="rounded-lg border border-border bg-background-subtle p-3">
             <p className="text-xs text-muted-foreground">Nilai Pengajuan</p>
-
             <p className="num mt-1 text-lg font-semibold text-foreground">
               {formatRupiah(request.amount)}
             </p>
@@ -172,7 +163,7 @@ export function PaymentDialog({ open, request, onOpenChange, onConfirm }: Paymen
               multiple={false}
               disabled={isSubmitting}
               label="Unggah bukti transfer"
-              hint="Format PDF, JPG, atau JPEG. Maksimal 10 MB."
+              hint={`Format PDF, JPG, atau JPEG. Maksimal ${MAX_WEB_UPLOAD_SIZE_MB} MB.`}
             />
           </FormField>
 

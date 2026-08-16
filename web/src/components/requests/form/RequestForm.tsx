@@ -3,25 +3,20 @@ import { Link } from "@tanstack/react-router";
 import { ArrowLeft, Info } from "lucide-react";
 
 import { ConfirmationDialog } from "@/components/common/ConfirmationDialog";
-
 import { PageHeader } from "@/components/common/PageHeader";
-
 import {
   AttachmentsSection,
   BeneficiarySection,
   RequestDetailsSection,
   RequestSummary,
 } from "@/components/requests/form/RequestFormSections";
-
 import { Button } from "@/components/ui/button";
-
 import { useRequestForm } from "@/hooks/use-request-form";
 
 import type { FinanceRequest, User } from "@/types";
 
 interface RequestFormProps {
   user: User;
-
   initialRequest?: FinanceRequest;
 }
 
@@ -64,8 +59,7 @@ export function RequestForm({ user, initialRequest }: RequestFormProps) {
           <Info className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
 
           <p className="text-sm text-muted-foreground">
-            Data pengajuan sudah tersambung ke Finance API. Upload dokumen pendukung akan diaktifkan
-            pada integrasi file berikutnya.
+            Dokumen pendukung akan diunggah ke Google Drive saat pengajuan disimpan atau diajukan.
           </p>
         </div>
       )}
@@ -83,7 +77,6 @@ export function RequestForm({ user, initialRequest }: RequestFormProps) {
         className="grid gap-4 lg:grid-cols-3"
         onSubmit={(event) => {
           event.preventDefault();
-
           form.handleOpenSubmit();
         }}
       >
@@ -102,7 +95,11 @@ export function RequestForm({ user, initialRequest }: RequestFormProps) {
             disabled={form.isSaving}
           />
 
-          <AttachmentsSection values={form.values} setField={form.setField} disabled />
+          <AttachmentsSection
+            values={form.values}
+            setField={form.setField}
+            disabled={form.isSaving}
+          />
         </div>
 
         <RequestSummary

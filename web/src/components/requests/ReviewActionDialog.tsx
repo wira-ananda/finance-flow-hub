@@ -47,9 +47,7 @@ export function ReviewActionDialog({
   onConfirm,
 }: ReviewActionDialogProps) {
   const [note, setNote] = useState("");
-
   const [error, setError] = useState<string | null>(null);
-
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!type) {
@@ -101,6 +99,8 @@ export function ReviewActionDialog({
       setNote("");
       setError(null);
       onOpenChange(false);
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : "Aksi review gagal diproses.");
     } finally {
       setIsSubmitting(false);
     }

@@ -274,9 +274,7 @@ function mapDetailDocuments(
   usersById: Map<string, User>,
 ): RequestDocument[] {
   const attachments = detail.attachments ?? [];
-
   const requestDocuments = detail.documents ?? [];
-
   const payments = getDetailPayments(detail);
 
   const documents: RequestDocument[] = attachments.map((attachment) => ({
@@ -287,6 +285,8 @@ function mapDetailDocuments(
     uploadedAt: attachment.created_at,
     uploadedBy: usersById.get(attachment.uploaded_by)?.name ?? attachment.uploaded_by ?? "-",
     fileUrl: attachment.file_url,
+    fileId: attachment.file_id,
+    mimeType: attachment.mime_type,
   }));
 
   requestDocuments.forEach((document) => {
@@ -299,6 +299,8 @@ function mapDetailDocuments(
       uploadedAt: document.generated_at,
       uploadedBy: usersById.get(document.generated_by)?.name ?? document.generated_by ?? "-",
       fileUrl: document.file_url,
+      fileId: document.file_id,
+      mimeType: "application/pdf",
     });
   });
 
@@ -315,6 +317,8 @@ function mapDetailDocuments(
       uploadedAt: payment.processed_at,
       uploadedBy: usersById.get(payment.processed_by)?.name ?? payment.processed_by ?? "-",
       fileUrl: payment.proof_file_url,
+      fileId: payment.proof_file_id,
+      mimeType: payment.proof_mime_type,
     });
   });
 
@@ -351,11 +355,8 @@ function mapLatestPayment(detail: ApiRequestDetail): RequestPayment | null {
  */
 export function mapApiRequestDetail(detail: ApiRequestDetail, users: User[] = []): FinanceRequest {
   const request = mapApiFinancialRequest(detail.request, users);
-
   const usersById = getUserMap(users);
-
   const histories = detail.histories ?? detail.history ?? [];
-
   const requestDocuments = detail.documents ?? [];
 
   const historyActivities = histories

@@ -19,6 +19,7 @@ import { Route as ReviewRouteImport } from './routes/review'
 import { Route as RiwayatReviewRouteImport } from './routes/riwayat-review'
 import { Route as UnitBisnisRouteImport } from './routes/unit-bisnis'
 import { Route as ApiFinanceRouteImport } from './routes/api.finance'
+import { Route as ApiFinanceFileRouteImport } from './routes/api.finance-file'
 import { Route as PengajuanIndexRouteImport } from './routes/pengajuan.index'
 import { Route as PengajuanIdRouteImport } from './routes/pengajuan.$id'
 import { Route as PengajuanBaruRouteImport } from './routes/pengajuan.baru'
@@ -74,6 +75,11 @@ const ApiFinanceRoute = ApiFinanceRouteImport.update({
   path: '/api/finance',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiFinanceFileRoute = ApiFinanceFileRouteImport.update({
+  id: '/api/finance-file',
+  path: '/api/finance-file',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PengajuanIndexRoute = PengajuanIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -106,6 +112,7 @@ export interface FileRoutesByFullPath {
   '/riwayat-review': typeof RiwayatReviewRoute
   '/unit-bisnis': typeof UnitBisnisRoute
   '/api/finance': typeof ApiFinanceRoute
+  '/api/finance-file': typeof ApiFinanceFileRoute
   '/pengajuan/$id': typeof PengajuanIdRoute
   '/pengajuan/baru': typeof PengajuanBaruRoute
   '/pengajuan/': typeof PengajuanIndexRoute
@@ -121,6 +128,7 @@ export interface FileRoutesByTo {
   '/riwayat-review': typeof RiwayatReviewRoute
   '/unit-bisnis': typeof UnitBisnisRoute
   '/api/finance': typeof ApiFinanceRoute
+  '/api/finance-file': typeof ApiFinanceFileRoute
   '/pengajuan/$id': typeof PengajuanIdRoute
   '/pengajuan/baru': typeof PengajuanBaruRoute
   '/pengajuan': typeof PengajuanIndexRoute
@@ -138,6 +146,7 @@ export interface FileRoutesById {
   '/riwayat-review': typeof RiwayatReviewRoute
   '/unit-bisnis': typeof UnitBisnisRoute
   '/api/finance': typeof ApiFinanceRoute
+  '/api/finance-file': typeof ApiFinanceFileRoute
   '/pengajuan/$id': typeof PengajuanIdRoute
   '/pengajuan/baru': typeof PengajuanBaruRoute
   '/pengajuan/': typeof PengajuanIndexRoute
@@ -156,6 +165,7 @@ export interface FileRouteTypes {
     | '/riwayat-review'
     | '/unit-bisnis'
     | '/api/finance'
+    | '/api/finance-file'
     | '/pengajuan/$id'
     | '/pengajuan/baru'
     | '/pengajuan/'
@@ -171,6 +181,7 @@ export interface FileRouteTypes {
     | '/riwayat-review'
     | '/unit-bisnis'
     | '/api/finance'
+    | '/api/finance-file'
     | '/pengajuan/$id'
     | '/pengajuan/baru'
     | '/pengajuan'
@@ -187,6 +198,7 @@ export interface FileRouteTypes {
     | '/riwayat-review'
     | '/unit-bisnis'
     | '/api/finance'
+    | '/api/finance-file'
     | '/pengajuan/$id'
     | '/pengajuan/baru'
     | '/pengajuan/'
@@ -204,6 +216,7 @@ export interface RootRouteChildren {
   RiwayatReviewRoute: typeof RiwayatReviewRoute
   UnitBisnisRoute: typeof UnitBisnisRoute
   ApiFinanceRoute: typeof ApiFinanceRoute
+  ApiFinanceFileRoute: typeof ApiFinanceFileRoute
   ApiAuthGoogleRoute: typeof ApiAuthGoogleRoute
 }
 
@@ -279,6 +292,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiFinanceRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/finance-file': {
+      id: '/api/finance-file'
+      path: '/api/finance-file'
+      fullPath: '/api/finance-file'
+      preLoaderRoute: typeof ApiFinanceFileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/pengajuan/': {
       id: '/pengajuan/'
       path: '/'
@@ -337,6 +357,7 @@ const rootRouteChildren: RootRouteChildren = {
   RiwayatReviewRoute: RiwayatReviewRoute,
   UnitBisnisRoute: UnitBisnisRoute,
   ApiFinanceRoute: ApiFinanceRoute,
+  ApiFinanceFileRoute: ApiFinanceFileRoute,
   ApiAuthGoogleRoute: ApiAuthGoogleRoute,
 }
 export const routeTree = rootRouteImport

@@ -173,6 +173,12 @@ export interface ApiRequestDetail {
   documents?: ApiRequestDocumentRecord[];
 }
 
+export interface ApiUploadFileInput {
+  name: string;
+  mimeType: string;
+  base64: string;
+}
+
 export interface ApiRequestInput {
   title: string;
   description: string;

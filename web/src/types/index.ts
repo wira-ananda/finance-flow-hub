@@ -56,6 +56,10 @@ export interface RequestDocument {
   uploadedBy: string;
 
   fileUrl?: string;
+
+  fileId?: string;
+
+  mimeType?: string;
 }
 
 export interface RequestPayment {

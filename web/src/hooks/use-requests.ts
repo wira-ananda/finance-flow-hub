@@ -1,18 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { financeQueryKeys } from "@/lib/api/query-keys";
-
 import { useUsersQuery } from "@/hooks/use-users";
-
+import { invalidateRequestQueries } from "@/lib/api/query-invalidation";
+import { financeQueryKeys } from "@/lib/api/query-keys";
 import {
-  createAndSubmitRequest,
   saveDraftRequest,
   submitRequest,
   updateRequest,
   type CreateRequestInput,
   type UpdateRequestInput,
 } from "@/services/request-write.service";
-
 import { fetchRequestDetail, fetchRequests } from "@/services/request.service";
 
 import type { User } from "@/types";
@@ -53,25 +50,22 @@ export function useRequestQuery(user: User | null, requestId: string | null) {
 }
 
 /**
- * Mutation create request. submitNow menentukan DRAFT atau langsung SUBMITTED.
+ * Membuat DRAFT baru. Workflow submit selalu membuat draft lebih dulu agar attachment dapat diunggah
+ * sebelum status berubah menjadi SUBMITTED.
  */
 export function useCreateRequestMutation(user: User) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({
-      input,
-      submitNow,
-    }: {
-      input: CreateRequestInput;
+    mutationFn: ({ input }: { input: CreateRequestInput; refresh?: boolean }) =>
+      saveDraftRequest(user, input),
 
-      submitNow: boolean;
-    }) => (submitNow ? createAndSubmitRequest(user, input) : saveDraftRequest(user, input)),
+    onSuccess: async (_request, variables) => {
+      if (variables.refresh === false) {
+        return;
+      }
 
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: financeQueryKeys.requests.root,
-      });
+      await invalidateRequestQueries(queryClient, user.id);
     },
   });
 }
@@ -88,9 +82,7 @@ export function useUpdateRequestMutation(user: User) {
       input,
     }: {
       requestId: string;
-
       input: UpdateRequestInput;
-
       refresh?: boolean;
     }) => updateRequest(user, requestId, input),
 
@@ -99,15 +91,7 @@ export function useUpdateRequestMutation(user: User) {
         return;
       }
 
-      await Promise.all([
-        queryClient.invalidateQueries({
-          queryKey: financeQueryKeys.requests.list(user.id),
-        }),
-
-        queryClient.invalidateQueries({
-          queryKey: financeQueryKeys.requests.detail(user.id, variables.requestId),
-        }),
-      ]);
+      await invalidateRequestQueries(queryClient, user.id, variables.requestId);
     },
   });
 }
@@ -128,15 +112,11 @@ export function useSubmitRequestMutation(user: User | null) {
     },
 
     onSuccess: async (_request, requestId) => {
-      await Promise.all([
-        queryClient.invalidateQueries({
-          queryKey: financeQueryKeys.requests.list(user?.id ?? ""),
-        }),
+      if (!user) {
+        return;
+      }
 
-        queryClient.invalidateQueries({
-          queryKey: financeQueryKeys.requests.detail(user?.id ?? "", requestId),
-        }),
-      ]);
+      await invalidateRequestQueries(queryClient, user.id, requestId);
     },
   });
 }

@@ -260,9 +260,7 @@ function formatDocumentDate(value: string): string {
   ];
 
   const year = Number(match[1]);
-
   const month = Number(match[2]);
-
   const day = Number(match[3]);
 
   return `${day} ${monthNames[month - 1]} ${year}`;
@@ -275,13 +273,14 @@ function formatDocumentDateTime(isoDate: string): string {
     return isoDate;
   }
 
-  const timeZone = Session.getScriptTimeZone();
-
-  const formatted = Utilities.formatDate(date, timeZone, "yyyy-MM-dd HH:mm");
+  const formatted = Utilities.formatDate(
+    date,
+    "Asia/Makassar",
+    "yyyy-MM-dd HH:mm",
+  );
 
   const [datePart, timePart] = formatted.split(" ");
   const [year, month, day] = datePart.split("-").map(Number);
-  const [hour, minute] = timePart.split(":");
 
   const monthNames = [
     "Januari",
@@ -298,7 +297,7 @@ function formatDocumentDateTime(isoDate: string): string {
     "Desember",
   ];
 
-  return `${day} ${monthNames[month - 1]} ${year}`;
+  return `${day} ${monthNames[month - 1]} ${year}, ${timePart} WITA`;
 }
 
 function formatRequestCategory(category: RequestCategory): string {

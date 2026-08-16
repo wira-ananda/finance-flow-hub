@@ -3,19 +3,14 @@ import { Link } from "@tanstack/react-router";
 import { ArrowLeft, Pencil } from "lucide-react";
 
 import { ActivityTimeline } from "@/components/common/ActivityTimeline";
-
 import { ConfirmationDialog } from "@/components/common/ConfirmationDialog";
-
 import { EmptyState } from "@/components/common/EmptyState";
-
 import { ErrorState } from "@/components/common/ErrorState";
-
 import { LoadingState } from "@/components/common/LoadingState";
-
 import { PageHeader } from "@/components/common/PageHeader";
-
 import { StatusBadge } from "@/components/common/StatusBadge";
-
+import { PaymentDialog } from "@/components/requests/PaymentDialog";
+import { ReviewActionDialog } from "@/components/requests/ReviewActionDialog";
 import {
   BeneficiaryInformationSection,
   PaymentInformationSection,
@@ -23,28 +18,18 @@ import {
   RequestInformationSection,
   RequestStatusAlert,
 } from "@/components/requests/detail/RequestDetailSections";
-
 import { Button } from "@/components/ui/button";
-
 import { useBusinessUnits } from "@/hooks/use-business-units";
-
-import { useRequestQuery } from "@/hooks/use-requests";
-
 import { useRequestDetailActions } from "@/hooks/use-request-detail-actions";
-
+import { useRequestQuery } from "@/hooks/use-requests";
 import { ACTION_LABELS, availableActions } from "@/lib/permissions";
-
 import { useSession } from "@/providers/session-provider";
-
 import { getBusinessUnitName } from "@/services/request.service";
 
 import type { RequestAction } from "@/lib/permissions";
-
 import type { UserRole } from "@/types";
 
 type BackRoute = "/" | "/pengajuan" | "/review" | "/pembayaran";
-
-const STEP_7D_REMOTE_ACTIONS = new Set<RequestAction>(["EDIT", "SUBMIT"]);
 
 function getBackRoute(role: UserRole): BackRoute {
   switch (role) {
@@ -62,13 +47,22 @@ function getBackRoute(role: UserRole): BackRoute {
   }
 }
 
+function getActionButtonClass(action: RequestAction): string {
+  if (["SUBMIT", "START_REVIEW", "APPROVE", "PROCESS_PAYMENT"].includes(action)) {
+    return "bg-primary text-primary-foreground hover:bg-primary-hover";
+  }
+
+  if (action === "REJECT") {
+    return "border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive";
+  }
+
+  return "";
+}
+
 export function RequestDetailPage({ id }: { id: string }) {
   const { user } = useSession();
-
   const units = useBusinessUnits();
-
   const requestQuery = useRequestQuery(user, id);
-
   const request = requestQuery.data;
 
   const actions = useRequestDetailActions({
@@ -84,7 +78,6 @@ export function RequestDetailPage({ id }: { id: string }) {
     return (
       <>
         <PageHeader title="Detail Pengajuan" />
-
         <LoadingState rows={8} />
       </>
     );
@@ -127,12 +120,8 @@ export function RequestDetailPage({ id }: { id: string }) {
     );
   }
 
-  const availableRequestActions = availableActions(user, request).filter((action) =>
-    STEP_7D_REMOTE_ACTIONS.has(action),
-  );
-
+  const availableRequestActions = availableActions(user, request);
   const supportingDocuments = request.documents.filter((document) => document.type === "LAMPIRAN");
-
   const officialDocuments = request.documents.filter((document) => document.type !== "LAMPIRAN");
 
   return (
@@ -161,28 +150,16 @@ export function RequestDetailPage({ id }: { id: string }) {
                 size="sm"
                 disabled={actions.isProcessing}
                 variant="outline"
-                className={
-                  action === "SUBMIT"
-                    ? "bg-primary text-primary-foreground hover:bg-primary-hover"
-                    : ""
-                }
+                className={getActionButtonClass(action)}
                 onClick={() => actions.handleAction(action)}
               >
                 {action === "EDIT" ? <Pencil className="size-3.5" aria-hidden /> : null}
-
                 {ACTION_LABELS[action]}
               </Button>
             ))}
           </>
         }
       />
-
-      {user.role !== "UNIT_USER" ? (
-        <div className="rounded-lg border border-border bg-background-subtle px-4 py-3 text-sm text-muted-foreground">
-          Data detail sudah berasal dari backend. Aksi review dan pembayaran akan dihubungkan pada
-          Step 7E–7G agar tidak menjalankan mutation mock terhadap data produksi.
-        </div>
-      ) : null}
 
       {actions.actionError ? (
         <div
@@ -198,18 +175,18 @@ export function RequestDetailPage({ id }: { id: string }) {
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
           <RequestInformationSection request={request} />
-
           <BeneficiaryInformationSection request={request} />
-
           <PaymentInformationSection request={request} />
 
           <RequestDocumentsSection
+            requestId={request.id}
             title="Dokumen Pendukung"
             documents={supportingDocuments}
             emptyDescription="Belum ada dokumen pendukung."
           />
 
           <RequestDocumentsSection
+            requestId={request.id}
             title="Surat Persetujuan & Bukti Transfer"
             documents={officialDocuments}
             emptyDescription="Dokumen resmi akan tersedia setelah pengajuan disetujui dan dibayarkan."
@@ -230,7 +207,7 @@ export function RequestDetailPage({ id }: { id: string }) {
       <ConfirmationDialog
         open={actions.pendingAction !== null}
         onOpenChange={(open) => {
-          if (!open) {
+          if (!open && !actions.isProcessing) {
             actions.setPendingAction(null);
           }
         }}
@@ -243,10 +220,36 @@ export function RequestDetailPage({ id }: { id: string }) {
             ? request.status === "REVISION_REQUIRED"
               ? "Ya, Ajukan Ulang"
               : "Ya, Ajukan"
-            : "Konfirmasi"
+            : actions.pendingAction === "START_REVIEW"
+              ? "Ya, Mulai Review"
+              : actions.pendingAction === "APPROVE"
+                ? "Ya, Setujui"
+                : "Konfirmasi"
         }
         onConfirm={actions.handleConfirmAction}
       />
+
+      <ReviewActionDialog
+        key={actions.reviewDialogType ?? "review-dialog-closed"}
+        open={actions.reviewDialogType !== null}
+        type={actions.reviewDialogType}
+        onOpenChange={(open) => {
+          if (!open && !actions.isProcessing) {
+            actions.setReviewDialogType(null);
+          }
+        }}
+        onConfirm={actions.handleReviewConfirm}
+      />
+
+      {actions.paymentDialogOpen ? (
+        <PaymentDialog
+          key={request.id}
+          open
+          request={request}
+          onOpenChange={actions.setPaymentDialogOpen}
+          onConfirm={actions.handlePaymentConfirm}
+        />
+      ) : null}
     </>
   );
 }

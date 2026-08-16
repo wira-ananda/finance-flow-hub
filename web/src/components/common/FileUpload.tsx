@@ -2,15 +2,16 @@ import { FileText, Trash2, UploadCloud } from "lucide-react";
 import { useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import {
+  MAX_WEB_UPLOAD_SIZE_MB,
+  normalizeUploadMimeType,
+  validateUploadFile,
+} from "@/lib/file-upload";
 import { formatUkuranFile } from "@/lib/formatters";
 
-export interface FileUploadItem {
-  id?: string;
-  name: string;
-  sizeKb: number;
-  uploadedAt?: string;
-  uploadedBy?: string;
-}
+import type { FileUploadItem } from "@/types/files";
+
+export type { FileUploadItem } from "@/types/files";
 
 interface FileUploadProps {
   value: FileUploadItem[];
@@ -22,81 +23,67 @@ interface FileUploadProps {
   maxSizeMb?: number;
 }
 
-const ALLOWED_EXTENSIONS = ["pdf", "jpg", "jpeg", "xlsx"];
-
-function getFileExtension(fileName: string): string {
-  return fileName.split(".").pop()?.toLowerCase() ?? "";
-}
-
 function createTemporaryFileId(): string {
   return `local-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
 /**
- * Mock controlled file upload.
- *
- * File asli belum dikirim ke storage. Component hanya menyimpan
- * metadata file agar flow frontend dapat diuji sampai Apps Script
- * dan Google Drive diintegrasikan.
+ * Controlled file picker untuk attachment request dan bukti pembayaran.
+ * File asli disimpan di state sampai user menekan aksi submit/save.
  */
 export function FileUpload({
   value,
   onChange,
   label = "Unggah dokumen pendukung",
-  hint = "Format PDF, JPG, atau XLSX. Maksimal 10 MB per berkas.",
+  hint = `Format PDF, JPG, atau JPEG. Maksimal ${MAX_WEB_UPLOAD_SIZE_MB} MB per berkas.`,
   multiple = true,
   disabled = false,
-  maxSizeMb = 10,
+  maxSizeMb = MAX_WEB_UPLOAD_SIZE_MB,
 }: FileUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
-
   const [error, setError] = useState<string | null>(null);
 
   const handleFilesSelected = (selectedFiles: File[]) => {
     setError(null);
 
     const validFiles: FileUploadItem[] = [];
-
     const errors: string[] = [];
 
     selectedFiles.forEach((file) => {
-      const extension = getFileExtension(file.name);
+      try {
+        validateUploadFile(file);
 
-      const sizeKb = Math.max(1, Math.round(file.size / 1024));
+        const sizeKb = Math.max(1, Math.ceil(file.size / 1024));
+        const maxSizeKb = maxSizeMb * 1024;
 
-      const maxSizeKb = maxSizeMb * 1024;
+        if (sizeKb > maxSizeKb) {
+          throw new Error(`${file.name}: ukuran maksimal ${maxSizeMb} MB.`);
+        }
 
-      if (!ALLOWED_EXTENSIONS.includes(extension)) {
-        errors.push(`${file.name}: format tidak didukung`);
+        const duplicate = value.some(
+          (currentFile) => currentFile.name === file.name && currentFile.sizeKb === sizeKb,
+        );
 
-        return;
+        if (duplicate) {
+          throw new Error(`${file.name}: file sudah dipilih.`);
+        }
+
+        validFiles.push({
+          id: createTemporaryFileId(),
+          name: file.name,
+          sizeKb,
+          mimeType: normalizeUploadMimeType(file),
+          file,
+        });
+      } catch (fileError) {
+        errors.push(
+          fileError instanceof Error ? fileError.message : `${file.name}: file tidak valid.`,
+        );
       }
-
-      if (sizeKb > maxSizeKb) {
-        errors.push(`${file.name}: ukuran melebihi ${maxSizeMb} MB`);
-
-        return;
-      }
-
-      const duplicate = value.some(
-        (currentFile) => currentFile.name === file.name && currentFile.sizeKb === sizeKb,
-      );
-
-      if (duplicate) {
-        errors.push(`${file.name}: file sudah dipilih`);
-
-        return;
-      }
-
-      validFiles.push({
-        id: createTemporaryFileId(),
-        name: file.name,
-        sizeKb,
-      });
     });
 
     if (errors.length > 0) {
-      setError(errors.join(". "));
+      setError(errors.join(" "));
     }
 
     if (validFiles.length === 0) {
@@ -139,7 +126,7 @@ export function FileUpload({
           type="file"
           multiple={multiple}
           disabled={disabled}
-          accept=".pdf,.jpg,.jpeg,.xlsx"
+          accept=".pdf,.jpg,.jpeg,application/pdf,image/jpeg"
           className="hidden"
           onChange={(event) => handleFilesSelected(Array.from(event.target.files ?? []))}
         />
@@ -154,10 +141,7 @@ export function FileUpload({
       {value.length > 0 ? (
         <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border">
           {value.map((file, index) => (
-            <li
-              key={file.id ?? `${file.name}-${file.sizeKb}-${index}`}
-              className="flex items-center gap-3 bg-card px-3 py-2.5"
-            >
+            <li key={file.id} className="flex items-center gap-3 bg-card px-3 py-2.5">
               <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-background-subtle text-muted-foreground">
                 <FileText className="size-4" aria-hidden />
               </span>
@@ -169,6 +153,7 @@ export function FileUpload({
 
                 <span className="block text-xs text-muted-foreground">
                   {formatUkuranFile(file.sizeKb)}
+                  {file.file ? " · Belum diunggah" : " · Tersimpan"}
                 </span>
               </span>
 
